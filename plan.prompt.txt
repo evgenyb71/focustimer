@@ -1,0 +1,42 @@
+You are a senior frontend engineer experienced with Chrome Extensions (Manifest V3).
+
+Create a detailed implementation plan for a Chrome extension that acts as a
+two-phase sequential timer.
+
+Functional requirements:
+1. The extension has two configurable timers: Timer A and Timer B.
+2. The user can set the duration for both timers before starting.
+3. The user clicks "Start":
+   - Timer A starts counting down.
+   - Timer B remains idle.
+   - The UI updates the remaining time once per second.
+4. When Timer A completes:
+   - Show a notification with sound.
+   - The notification includes an "OK" button.
+5. When the user clicks "OK":
+   - Timer B starts counting down.
+   - The UI updates the remaining time once per second.
+6. When Timer B completes:
+   - Show a notification with sound.
+   - The notification presents two buttons: "Done" and "Restart".
+7. If "Done" is selected:
+   - Both timers stop.
+   - The extension returns to the initial ready state.
+   - "Start" is enabled again.
+8. If "Restart" is selected:
+   - Timer A restarts using the previously configured duration.
+
+Non-functional requirements:
+- Timers must continue to work correctly if the popup is closed.
+- State must survive popup open/close cycles.
+- Use Chrome extension best practices (Manifest V3).
+
+Please include:
+- High-level architecture (popup, background/service worker, storage).
+- State machine or state transitions.
+- How timers and notifications are handled.
+- Suggested data model for timer state.
+- Key edge cases (rapid clicks, reloads, browser sleep).
+- Optional UX improvements.
+
+Do NOT write full code unless necessary; focus on design and reasoning.

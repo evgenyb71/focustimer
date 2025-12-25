@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Focus Timer</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="header">
+        <div>
+          <h1>Focus / Break Timer</h1>
+          <p class="subtitle">Run Focus, confirm, then run Break.</p>
+        </div>
+        <div class="header-actions">
+          <button id="pauseBtn" class="icon-button" title="Pause/resume">||</button>
+          <button id="cancelBtn" class="icon-button" title="Cancel and reset">x</button>
+        </div>
+      </header>
+
+      <section class="panel">
+        <div class="field">
+          <label for="timerA">Focus Timer (minutes)</label>
+          <input id="timerA" type="number" min="1" step="1" />
+        </div>
+        <div class="field">
+          <label for="timerB">Break Timer (minutes)</label>
+          <input id="timerB" type="number" min="1" step="1" />
+        </div>
+      </section>
+
+      <section class="status">
+        <div class="status-label" id="statusLabel">Ready</div>
+        <div class="status-time" id="statusTime">--:--</div>
+        <div class="status-message" id="statusMessage"></div>
+      </section>
+
+      <section class="actions">
+        <button id="startBtn" class="primary">Start</button>
+      </section>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
