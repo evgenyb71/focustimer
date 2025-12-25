@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key>
+	<string>FocusTimer</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.example.FocusTimer</string>
+	<key>CFBundleName</key>
+	<string>FocusTimer</string>
+	<key>UILaunchScreen</key>
+	<dict/>
+	<key>UIUserInterfaceStyle</key>
+	<string>Light</string>
+	<key>NSLocalNotificationUsageDescription</key>
+	<string>We use notifications to alert you when Focus or Break finishes.</string>
+</dict>
+</plist>
