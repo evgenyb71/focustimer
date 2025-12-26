@@ -3,7 +3,7 @@ import UserNotifications
 
 @MainActor
 final class TimerViewModel: ObservableObject {
-    enum Phase: String {
+    enum Phase: String, Codable {
         case idle
         case runningFocus
         case waitingForConfirm
