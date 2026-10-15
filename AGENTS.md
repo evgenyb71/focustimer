@@ -35,6 +35,9 @@ No testing framework is set up yet. When you add one, specify:
 
 ## Commit & Pull Request Guidelines
 
+- Maintain root `CHANGELOG.md` with `## YYYY-MM-DD` headings, newest first, and concise change bullets.
+- Before merging, manually invoke `$update-changelog` to review and update it. Do not invoke the skill automatically or merge as part of the changelog update.
+
 There is no Git history or commit convention to follow yet. Until conventions exist:
 
 - Write clear, imperative commit messages (for example, `Add login form validation`).

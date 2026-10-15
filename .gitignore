@@ -2,3 +2,18 @@
 xcuserdata/
 ios/Saved
 ios/FocusTimer2
+
+# Local environment configuration (keep shareable examples).
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Xcode build output and signing credentials.
+DerivedData/
+/ios/build/
+*.xcarchive/
+*.ipa
+*.p12
+*.p8
+*.mobileprovision
