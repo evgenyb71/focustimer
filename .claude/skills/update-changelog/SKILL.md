@@ -14,7 +14,7 @@ Maintain `CHANGELOG.md` in the repository root. The user invokes this explicitly
 2. **No changelog yet:** examine every commit reachable from `HEAD`:
    `git log HEAD --no-merges --date=short --format='%h %ad %s'`
    Group substantive changes by commit author date and include every date that has any. Read commit bodies and diffs where the subject is unclear. Never invent dates.
-3. **Changelog exists:** keep all existing entries. Find the target branch (the user's choice, else the default branch, normally `main`) and inspect commits and the diff from the merge base to `HEAD`. Also inspect staged, unstaged, and relevant untracked work meant for the merge. If already on the target branch, compare recent history with existing entries. Ask about the target or scope only if the answer would materially change the entries.
+3. **Changelog exists:** keep all existing entries. Find the target branch (the user's choice, else the default branch, normally `main`) and inspect commits and the diff from the merge base to `HEAD`. Also inspect staged, unstaged, and relevant untracked work meant for the merge. If already on the target branch, inspect the commits since the last commit that touched `CHANGELOG.md` (`git log --no-merges --date=short --format='%h %ad %s' "$(git log -1 --format=%H -- CHANGELOG.md)..HEAD"`), then check them against existing entries. Ask about the target or scope only if the answer would materially change the entries.
 4. Use local history; do not fetch unless asked. Do not trust the newest heading date as a coverage marker, because several updates can land on one day. Compare the actual changes with the existing bullets.
 
 ## Write the entries

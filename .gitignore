@@ -18,15 +18,13 @@ DerivedData/
 *.p8
 *.mobileprovision
 
-# macOS and Git client artifacts.
+# macOS artifacts.
 .AppleDouble
 .Spotlight-V100
 .Trashes
-.gitx_test
 
 # Xcode and Swift tooling user data.
 *.xcuserstate
-*.xcuserdatad/
 *.xcscmblueprint
 .build/
 *.dSYM/

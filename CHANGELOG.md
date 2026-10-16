@@ -7,6 +7,11 @@
 - Document an Xcode-first verification workflow and safe command-line toolchain checks in the repository guidelines.
 - Add `CLAUDE.md` for Claude Code and a manual-only `update-changelog` project skill.
 - Extend `.gitignore` for macOS, Xcode user data, Chrome signing keys and packages, editor, and local agent files; stop tracking the stray `.gitx_test` file.
+- Move multi-agent handoff and branch/commit rules from `CLAUDE.md` into `AGENTS.md` so every agent follows them, and define when agents should run a command-line build.
+- Trim `CLAUDE.md` to Claude-specific guidance, replacing dated status and duplicated code facts with pointers to the iOS roadmap and tech stack.
+- Define the commit range the `update-changelog` skill inspects when run on the target branch.
+- Share the FocusTimer Xcode scheme so command-line builds no longer depend on an auto-generated scheme.
+- Drop redundant `.gitx_test` and `*.xcuserdatad/` ignore rules.
 
 ## 2026-10-15
 
