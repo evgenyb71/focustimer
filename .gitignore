@@ -17,3 +17,33 @@ DerivedData/
 *.p12
 *.p8
 *.mobileprovision
+
+# macOS and Git client artifacts.
+.AppleDouble
+.Spotlight-V100
+.Trashes
+.gitx_test
+
+# Xcode and Swift tooling user data.
+*.xcuserstate
+*.xcuserdatad/
+*.xcscmblueprint
+.build/
+*.dSYM/
+*.dSYM.zip
+*.xcresult/
+
+# Chrome extension packaging and signing keys.
+*.crx
+*.pem
+chrome/*.zip
+
+# Editor and local agent settings (shared .claude/skills stay tracked).
+.idea/
+.vscode/
+.claude/settings.local.json
+.claude/worktrees/
+CLAUDE.local.md
+
+# Logs and scratch files.
+*.log

@@ -4,6 +4,9 @@
 
 - Establish separate Chrome retrospective and iOS constitutions covering mission, tech stack, and small roadmap phases.
 - Adopt a spec driven working agreement and refresh the root README; preserve the four original documents unchanged in `specs/history/`.
+- Document an Xcode-first verification workflow and safe command-line toolchain checks in the repository guidelines.
+- Add `CLAUDE.md` for Claude Code and a manual-only `update-changelog` project skill.
+- Extend `.gitignore` for macOS, Xcode user data, Chrome signing keys and packages, editor, and local agent files; stop tracking the stray `.gitx_test` file.
 
 ## 2026-10-15
 

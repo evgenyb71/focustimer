@@ -33,13 +33,19 @@ Follow the style of touched files: 2-space JavaScript indentation, 4-space Swift
 
 Chrome: load `chrome/` unpacked at `chrome://extensions` with Developer mode enabled. There is no compilation step. No Chrome implementation changes are part of the current roadmap.
 
-iOS: open the Xcode project with Xcode 26.5 or later and run FocusTimer on an available iOS 26+ iPhone simulator. From the repository root:
+iOS: the user builds and verifies the app in the Xcode GUI. Treat this as the primary workflow: open the project with Xcode 26.5 or later and run FocusTimer on an available iOS 26+ iPhone simulator. Record user-reported verification as such. Do not run a duplicate command-line build unless it is needed for the task.
+
+When agent verification requires Xcode tools, first check that the toolchain is usable: inspect `xcode-select -p`, verify `xcodebuild -version`, and confirm the required SDK with `xcodebuild -showsdks`. For simulator runs/tests, also check available runtimes/devices with `xcrun simctl list` and choose an installed compatible destination; do not reuse a hard-coded device UUID. If the selected directory is Command Line Tools or the wrong Xcode version, locate a compatible full Xcode installation and set `DEVELOPER_DIR` for the individual commands. Do not change the global selection with `sudo xcode-select --switch`.
+
+Keep agent build output in a separate temporary DerivedData directory. Preserve project settings, signing configuration, schemes, and the user's running Xcode/simulator session; do not reset devices, clean the user's build data, install toolchains/runtimes, or modify the project merely to make verification run. If prerequisites, permissions, or first-launch setup prevent a check, report the blocker and the unverified scope instead of claiming success.
+
+After those checks, a simulator build from the repository root can use:
 
 ```sh
 xcodebuild -project ios/FocusTimer/FocusTimer.xcodeproj -scheme FocusTimer -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/FocusTimerDerivedData CODE_SIGNING_ALLOWED=NO build
 ```
 
-Use a full Xcode developer directory if the machine defaults to Command Line Tools. Simulator builds need no signing credentials. Add the exact `xcodebuild test` command and installed simulator destination here when XCTest targets exist; none exist yet. The historical simulator build/launch checks do not establish full-flow verification. Check lifecycle and OS notifications separately from deterministic unit tests.
+Simulator builds need no signing credentials; keep `CODE_SIGNING_ALLOWED=NO` limited to the command invocation. Add the exact `xcodebuild test` command and installed simulator destination here when XCTest targets exist; none exist yet. The historical simulator build/launch checks do not establish full-flow verification. Check lifecycle and OS notifications separately from deterministic unit tests.
 
 For documentation-only changes, verify links, archived-file fidelity when moving originals, and `git diff --check`; a simulator build is unnecessary.
 
