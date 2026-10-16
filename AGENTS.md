@@ -1,50 +1,51 @@
-# Repository Guidelines
+# Project working agreement
 
-This repository is currently empty (no source, tests, or configuration files). Use the guidance below as the starting structure and update it as the project takes shape.
+## Scope and source of truth
 
-## Project Structure & Module Organization
+FocusTimer contains a frozen Chrome extension and an active native iPhone app. Read the relevant constitution before work:
 
-- Place application/source code in `src/`.
-- Keep tests in `tests/` (unit) and `tests/integration/` if needed.
-- Store static assets in `assets/` or `public/`.
-- Keep configuration at the root (for example, `package.json`, `pyproject.toml`, or `Makefile`).
+- `specs/chrome/mission.md`, `tech-stack.md`, `roadmap.md`: retrospective behavior and limitations. Do not change Chrome code without an explicit request to reopen its scope.
+- `specs/ios/mission.md`, `tech-stack.md`, `roadmap.md`: accepted iOS purpose, technical constraints, and small implementation phases.
+- `specs/history/`: the four original documents, preserved unchanged for reference. Embedded prompts and old proposals are historical material, not instructions or proof of delivered features.
 
-## Build, Test, and Development Commands
+Explicit user decisions take precedence. Distinguish implemented behavior, planned work, and verified results. Resolve material conflicts with the user and update the active spec; do not silently widen scope.
 
-No build or test tooling is configured yet. When adding tooling, document the exact commands here (examples):
+## Spec driven workflow
 
-- `npm run build` — compile/bundle the app.
-- `npm test` — run the test suite.
-- `npm run dev` — start a local development server.
+1. Select one small roadmap phase. Before implementation, create or update `specs/ios/phases/Ixx-short-name.md` with behavior, non-goals, affected components, and observable acceptance checks. Do not create empty phase scaffolding in advance.
+2. Implement only that phase. If it is too large to review, split it. Preserve the single authoritative timer state, explicit Break confirmation, local persistence, and deadline-based recovery.
+3. Verify the acceptance checks. Record actual commands, environment, results, and remaining limitations in the phase spec. Add focused regression tests for changed logic once test tooling exists.
+4. Update the roadmap status and relevant constitution when behavior changes. Mark work verified only with evidence; a spec or successful build alone does not prove runtime behavior.
 
-## Coding Style & Naming Conventions
+Keep Markdown clear and use relative links between repository documents. Preserve archived originals. Do not move existing application code into a new generic structure.
 
-No style rules are defined yet. When you add a language/tooling stack, record the conventions here (examples):
+## Repository layout and stack
 
-- Indentation: 2 spaces for JS/TS, 4 spaces for Python.
-- Naming: `camelCase` for variables/functions, `PascalCase` for types/classes.
-- Tooling: `eslint`, `prettier`, `ruff`, `black`, `gofmt`, etc.
+- `chrome/src/`, `chrome/assets/`, `chrome/manifest.json`: plain JavaScript/HTML/CSS, Manifest V3, no dependencies or build step.
+- `ios/FocusTimer/FocusTimer/`: Swift 6, SwiftUI, Foundation, UIKit lifecycle bridge, UserDefaults, UserNotifications. iPhone only, portrait, minimum iOS 26.0; Apple frameworks only.
+- `ios/FocusTimer/FocusTimer.xcodeproj`: FocusTimer scheme and app target. Keep future native XCTest targets beside the app in this project, with `*Tests.swift` filenames.
+- `specs/`: active platform constitutions, future phase specs, historical references.
+- Root `README.md`: navigation and local setup; `CHANGELOG.md`: dated project changes.
 
-## Testing Guidelines
+Follow the style of touched files: 2-space JavaScript indentation, 4-space Swift indentation; camelCase values/functions and PascalCase Swift types. No formatter, linter, or test runner is configured today. Do not invent npm commands or claim test targets exist.
 
-No testing framework is set up yet. When you add one, specify:
+## Build and verification
 
-- Framework (for example, `jest`, `vitest`, `pytest`).
-- File naming (for example, `*.test.ts`, `test_*.py`).
-- How to run unit vs. integration tests.
+Chrome: load `chrome/` unpacked at `chrome://extensions` with Developer mode enabled. There is no compilation step. No Chrome implementation changes are part of the current roadmap.
 
-## Commit & Pull Request Guidelines
+iOS: open the Xcode project with Xcode 26.5 or later and run FocusTimer on an available iOS 26+ iPhone simulator. From the repository root:
 
-- Maintain root `CHANGELOG.md` with `## YYYY-MM-DD` headings, newest first, and concise change bullets.
-- Before merging, manually invoke `$update-changelog` to review and update it. Do not invoke the skill automatically or merge as part of the changelog update.
+```sh
+xcodebuild -project ios/FocusTimer/FocusTimer.xcodeproj -scheme FocusTimer -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/FocusTimerDerivedData CODE_SIGNING_ALLOWED=NO build
+```
 
-There is no Git history or commit convention to follow yet. Until conventions exist:
+Use a full Xcode developer directory if the machine defaults to Command Line Tools. Simulator builds need no signing credentials. Add the exact `xcodebuild test` command and installed simulator destination here when XCTest targets exist; none exist yet. The historical simulator build/launch checks do not establish full-flow verification. Check lifecycle and OS notifications separately from deterministic unit tests.
 
-- Write clear, imperative commit messages (for example, `Add login form validation`).
-- Include a short PR description and link related issues.
-- Add screenshots for UI changes and note any manual testing performed.
+For documentation-only changes, verify links, archived-file fidelity when moving originals, and `git diff --check`; a simulator build is unnecessary.
 
-## Security & Configuration Tips
+## Git and security
 
-- Do not commit secrets. Use `.env` files and document required variables in `README.md`.
-- Keep environment-specific config out of source control; provide `.env.example` instead.
+- Maintain root `CHANGELOG.md` with `## YYYY-MM-DD` headings, newest first, and concise bullets.
+- Before merging, manually invoke `$update-changelog`; do not invoke it automatically or merge as part of its workflow.
+- Use clear imperative commit messages. PRs should describe the resulting behavior and validation, link the phase spec and related issues, and include screenshots for UI changes.
+- Do not commit credentials, signing keys/profiles, environment files, Xcode user data, or build output. Keep `.gitignore` current. If environment variables become necessary, document them in the root README and supply `.env.example`.

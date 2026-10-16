@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-16
+
+- Establish separate Chrome retrospective and iOS constitutions covering mission, tech stack, and small roadmap phases.
+- Adopt a spec driven working agreement and refresh the root README; preserve the four original documents unchanged in `specs/history/`.
+
 ## 2026-10-15
 
 - Document the manual pre-merge changelog workflow in the repository guidelines.

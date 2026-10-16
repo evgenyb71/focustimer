@@ -1,0 +1,57 @@
+# iOS roadmap
+
+Status: accepted high-level order on 2026-10-16. Baseline `6e00429`. Future phases are unstarted; documentation approval does not mark implementation complete.
+
+## Retrospective
+
+| Phase | Delivered in source | Evidence |
+| --- | --- | --- |
+| I-R01 | Initial two-phase SwiftUI app | `8df23b5`, 2025-12-25 |
+| I-R02 | Xcode scaffolding, Codable fix, workspace tracking | `d69c7e2`, `1a41f59`, 2025-12-26 |
+| I-R03 | Replacement iPhone-only Swift 6 / iOS 26 project | `f646069`, 2026-07-10 |
+| I-R04 | Focus/confirmation/Break, pause/resume/cancel, persisted deadlines, local notifications and UI | `TimerStore.swift`, `NotificationScheduler.swift`, `ContentView.swift` in I-R03 |
+| I-R05 | Automatic-signing development team configured | `6e00429`, 2026-10-15 |
+
+The archived status reports simulator build/install/launch and initial-screen inspection for I-R03. Full flow, lifecycle, and notification QA remain unverified. These rows describe implemented capabilities, not completion of the future acceptance checks.
+
+## Small forward phases
+
+Execute one phase at a time, in order. Before code, write a short phase spec at `specs/ios/phases/Ixx-short-name.md` covering intended behavior, non-goals, affected components, and concrete acceptance checks. Update it with evidence and limitations after verification. Split a phase further if it cannot fit a focused, reviewable change; do not bundle later features into a refactor.
+
+| Phase | Small deliverable | Exit check |
+| --- | --- | --- |
+| I01 | Record current build and manual Focus → confirmation → Break flow | Save actual simulator/device, OS, result, and any failures; no assumed historical pass |
+| I02 | Manually exercise pause/resume, cancel, relaunch, suspension, notification permission/actions | Record a state/action matrix; separate code defects from OS behavior |
+| I03 | Inject one clock dependency into timer logic | Existing flow preserved; production uses Date; tests can control now |
+| I04 | Inject one consistent persistence store | All reads/writes use the supplied store; isolated defaults do not affect production data |
+| I05 | Introduce a small notification boundary and XCTest unit target | Test double observes schedule/cancel calls; document and run the test command |
+| I06 | Add deterministic baseline transition/deadline tests | Cover Focus/Break, explicit confirmation, pause/resume, cancel, and delayed reconciliation |
+| I07 | Align and enforce configuration/state invariants | Test invalid ranges, missing deadlines, impossible paused states; retain agreed minute rules |
+| I08 | Add schema versioning and migration of current records | Fixtures from existing unversioned keys retain valid settings and timer state |
+| I09 | Recover corrupt/partial/unsupported saved records | Safe idle fallback, preserve valid config; relaunch remains usable |
+| I10 | Persist a cycle identity and validate action provenance | An old Focus notification cannot start Break in a newer cycle; duplicate actions are harmless |
+| I11 | Clean up obsolete pending and delivered notifications | Cancel, phase change, and new cycle invalidate old alerts; current valid alert remains actionable |
+| I12 | Settle expiry and clock-edge behavior | Pause at expiry completes; test duplicate callbacks, delayed activation, forward/backward clock changes |
+| I13 | Add and persist the completed state | Break expiry enters completed once; migration/relaunch restores it with no active deadline |
+| I14 | Add in-app Done | Completed → idle; configuration survives; repeated Done is harmless |
+| I15 | Add in-app Restart | Completed → new Focus with saved durations and new cycle identity; Break still needs confirmation |
+| I16 | Add notification Done | Valid Break completion notification routes to Done; stale/duplicate actions are ignored |
+| I17 | Add notification Restart | Valid action starts one Focus; foreground/background/relaunch paths are checked |
+| I18 | Show permission status and useful failure guidance | Denied alerts and scheduling errors do not block timer flow; Settings guidance is available |
+| I19 | Verify accessibility and visual resilience | Check VoiceOver, Dynamic Type, contrast, focus/order, control labels and largest supported text sizes |
+| I20 | Supply final app icon | Complete the 1024×1024 artwork slot and verify appearance in the app/launcher |
+| I21 | Prepare local release notes and verification checklist | Record version/build, privacy behavior, known limits, device checks, and reproducible build steps |
+
+Add focused XCTest coverage with each behavior change after the test target exists. Use native UI tests for meaningful control/state interactions; use manual simulator and physical-device checks for OS notification behavior. Unit success does not prove delivery under system restrictions. If baseline checks fail, specify and resolve the smallest blocking defect before proceeding.
+
+## Later decisions, not scheduled implementation
+
+App Store submission, store screenshots/privacy forms, signing/distribution automation, and release policy require a future decision. Custom sound, alternative defaults, fractional-minute input, broader device/OS support, sync, and analytics are not part of this roadmap. The current approved defaults stay one minute each, whole-minute UI, iPhone portrait, iOS 26+.
+
+## Completion discipline
+
+Mark each phase planned, in progress, or verified in its phase document; reference the implementing commit and actual acceptance evidence. Keep this roadmap's status current. Invoke `$update-changelog` manually before merging. A spec update alone is not proof that code exists or acceptance checks passed.
+
+## References
+
+[Mission and invariants](mission.md), [stack and build command](tech-stack.md), [archived iOS status](../history/focustimer_ios_spec.md), [original recommendations](../history/FOCUSTIMER_SPEC.md).
