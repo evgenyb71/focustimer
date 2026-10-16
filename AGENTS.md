@@ -19,6 +19,13 @@ Explicit user decisions take precedence. Distinguish implemented behavior, plann
 
 Keep Markdown clear and use relative links between repository documents. Preserve archived originals. Do not move existing application code into a new generic structure.
 
+## Handoff between agents
+
+Several models and tools (for example Claude Code and Codex) work on this repository. Keep the state of work in the repository, not in chat:
+
+- The phase spec `specs/ios/phases/Ixx-short-name.md` is the handoff record. Before ending a session, keep its status (planned, in progress, verified), decisions, commands run, results, and open limitations current, so another agent can continue from the file alone.
+- Before starting, check `git status` and the latest phase spec for unfinished work by another agent. Do not overwrite or revert changes you did not make; ask the user if they conflict with the task.
+
 ## Repository layout and stack
 
 - `chrome/src/`, `chrome/assets/`, `chrome/manifest.json`: plain JavaScript/HTML/CSS, Manifest V3, no dependencies or build step.
@@ -33,7 +40,7 @@ Follow the style of touched files: 2-space JavaScript indentation, 4-space Swift
 
 Chrome: load `chrome/` unpacked at `chrome://extensions` with Developer mode enabled. There is no compilation step. No Chrome implementation changes are part of the current roadmap.
 
-iOS: the user builds and verifies the app in the Xcode GUI. Treat this as the primary workflow: open the project with Xcode 26.5 or later and run FocusTimer on an available iOS 26+ iPhone simulator. Record user-reported verification as such. Do not run a duplicate command-line build unless it is needed for the task.
+iOS: the user builds and verifies the app in the Xcode GUI. Treat this as the primary workflow: open the project with Xcode 26.5 or later and run FocusTimer on an available iOS 26+ iPhone simulator. Record user-reported verification as such. Run a command-line build only when you changed Swift code or project files and the user has not reported a GUI build of that change, or when the phase's acceptance checks call for agent-produced evidence. Skip it for documentation-only changes.
 
 When agent verification requires Xcode tools, first check that the toolchain is usable: inspect `xcode-select -p`, verify `xcodebuild -version`, and confirm the required SDK with `xcodebuild -showsdks`. For simulator runs/tests, also check available runtimes/devices with `xcrun simctl list` and choose an installed compatible destination; do not reuse a hard-coded device UUID. If the selected directory is Command Line Tools or the wrong Xcode version, locate a compatible full Xcode installation and set `DEVELOPER_DIR` for the individual commands. Do not change the global selection with `sudo xcode-select --switch`.
 
@@ -51,6 +58,7 @@ For documentation-only changes, verify links, archived-file fidelity when moving
 
 ## Git and security
 
+- Work on a branch, not `main`. Commit, push, or open a PR only when the user asks.
 - Maintain root `CHANGELOG.md` with `## YYYY-MM-DD` headings, newest first, and concise bullets.
 - Before merging, manually invoke `$update-changelog`; do not invoke it automatically or merge as part of its workflow.
 - Use clear imperative commit messages. PRs should describe the resulting behavior and validation, link the phase spec and related issues, and include screenshots for UI changes.
