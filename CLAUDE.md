@@ -19,3 +19,7 @@ The user builds and verifies the app in the Xcode GUI; you cannot. Record their 
 ## Changelog skill
 
 `$update-changelog` in AGENTS.md maps to the project skill [.claude/skills/update-changelog/SKILL.md](.claude/skills/update-changelog/SKILL.md), invoked as `/update-changelog`. It is manual-only (`disable-model-invocation`): run it only when the user asks, normally before merging, and never merge, commit, or push as part of it. Codex has its own copy at `~/.codex/skills/update-changelog`; keep the two procedures in sync when changing either.
+
+## Start-phase skill
+
+`$start-phase` in AGENTS.md maps to the project skill [.claude/skills/start-phase/SKILL.md](.claude/skills/start-phase/SKILL.md), invoked as `/start-phase [phase ID]`. It is manual-only (`disable-model-invocation`): it asks the user via `AskUserQuestion` before writing anything, then creates the branch and phase spec. Codex has its own copy at `~/.codex/skills/start-phase`; keep the two procedures in sync when changing either.

@@ -12,7 +12,7 @@ Explicit user decisions take precedence. Distinguish implemented behavior, plann
 
 ## Spec driven workflow
 
-1. Select one small roadmap phase. Before implementation, create or update `specs/ios/phases/Ixx-short-name.md` with behavior, non-goals, affected components, and observable acceptance checks. Do not create empty phase scaffolding in advance.
+1. Select one small roadmap phase. Manually invoke `$start-phase` to pick the next unverified phase, interview the user (scope, decisions, validation), create the branch, and draft the phase spec; do not invoke it automatically, and it does not implement. Before implementation, create or update `specs/ios/phases/Ixx-short-name.md` with behavior, non-goals, affected components, and observable acceptance checks. Do not create empty phase scaffolding in advance.
 2. Implement only that phase. If it is too large to review, split it. Preserve the single authoritative timer state, explicit Break confirmation, local persistence, and deadline-based recovery.
 3. Verify the acceptance checks. Record actual commands, environment, results, and remaining limitations in the phase spec. Add focused regression tests for changed logic once test tooling exists.
 4. Update the roadmap status and relevant constitution when behavior changes. Mark work verified only with evidence; a spec or successful build alone does not prove runtime behavior.
