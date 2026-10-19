@@ -21,6 +21,7 @@ Move a phase here when its phase spec is marked verified and the work is pushed.
 | Phase | Deliverable | Verified | Phase spec | Pushed |
 | --- | --- | --- | --- | --- |
 | I01 | Recorded build and manual Focus → confirmation → Break flow (user-reported, iPhone 18 Pro Max simulator, iOS 27, Xcode 27.0) | 2026-10-19 | [I01-record-baseline-flow](phases/I01-record-baseline-flow.md) | `ce8fa8b` on `main` |
+| I02 | Pause/resume, cancel, relaunch exercised; matrix recorded, no defects found. Deferred, unverified: R3, R5, S1-S3, N1-N8 (suspension, notifications) | 2026-10-19 | [I02-exercise-lifecycle-notifications](phases/I02-exercise-lifecycle-notifications.md) | pending push on `feat/I02-exercise-lifecycle-notifications` |
 
 ## Small forward phases
 
@@ -28,7 +29,6 @@ Execute one phase at a time, in order. Before code, write a short phase spec at 
 
 | Phase | Small deliverable | Exit check |
 | --- | --- | --- |
-| I02 | Manually exercise pause/resume, cancel, relaunch, suspension, notification permission/actions | Record a state/action matrix; separate code defects from OS behavior |
 | I03 | Inject one clock dependency into timer logic | Existing flow preserved; production uses Date; tests can control now |
 | I04 | Inject one consistent persistence store | All reads/writes use the supplied store; isolated defaults do not affect production data |
 | I05 | Introduce a small notification boundary and XCTest unit target | Test double observes schedule/cancel calls; document and run the test command |
@@ -47,8 +47,8 @@ Execute one phase at a time, in order. Before code, write a short phase spec at 
 | I18 | Show permission status and useful failure guidance | Denied alerts and scheduling errors do not block timer flow; Settings guidance is available |
 | I19 | Verify accessibility and visual resilience | Check VoiceOver, Dynamic Type, contrast, focus/order, control labels and largest supported text sizes |
 | I20 | Supply final app icon | Complete the 1024×1024 artwork slot and verify appearance in the app/launcher |
-| I21 | Prepare local release notes and verification checklist | Record version/build, privacy behavior, known limits, device checks, and reproducible build steps |
-| I22 | Decide and implement launch-state policy (added after I01) | Record in the [mission](mission.md) whether each state (running, paused, waiting for Break confirmation, completed) is restored or reset on relaunch, keeping deadline recovery for running phases unless the decision changes that invariant. Behavior matches the decision for every state, with tests and a manual relaunch check; I01 observed the app reopening in waiting-for-Break |
+| I21 | Prepare local release notes and verification checklist | Record version /build, privacy behavior, known limits, device checks, and reproducible build steps |
+| I22 | Decide and implement launch-state policy (added after I01) | Record in the [mission](mission.md) whether each state (running, paused, waiting for Break confirmation, completed) is restored or reset on relaunch, keeping deadline recovery for running phases unless the decision changes that invariant. Behavior matches the decision for every state, with tests and a manual relaunch check; I01 observed the app reopening in waiting-for-Break. Note: whne timer is On, exit and re-start before timer ends - gets us back to phase + correct time to end. |
 | I23 | Make the active timer obvious (added after I01) | Design note in the phase spec, then the SwiftUI change: Focus and Break are visually distinct in running, paused, and waiting states. User-reported simulator screenshots show the active timer is identifiable at a glance; accessibility labels name it |
 | I24 | Design Focus-end and Break-end states (added after I01) | Design note in the phase spec, then the SwiftUI change: Focus end (waiting for Break confirmation) and Break end each have a clearly distinct presentation with the next action visible. It supplies the Break-end presentation I13 to I15 build on, so schedule it before I13 if that is wanted; user-reported screenshots confirm both ends are unmistakable |
 
