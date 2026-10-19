@@ -59,6 +59,7 @@ For documentation-only changes, verify links, archived-file fidelity when moving
 ## Git and security
 
 - Work on a branch, not `main`. Commit, push, or open a PR only when the user asks.
+- Always ask the user before running any remove or delete command (`rm`, `git branch -d/-D`, `git push --delete`, `git clean`, `git reset --hard`, deleting files or directories). Show the exact command and what it affects, then wait for an explicit yes. A request to delete in the same message does not replace this confirmation.
 - Maintain root `CHANGELOG.md` with `## YYYY-MM-DD` headings, newest first, and concise bullets.
 - Before merging, manually invoke `$update-changelog`; do not invoke it automatically or merge as part of its workflow.
 - Use clear imperative commit messages. PRs should describe the resulting behavior and validation, link the phase spec and related issues, and include screenshots for UI changes.

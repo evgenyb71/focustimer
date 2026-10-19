@@ -1,6 +1,6 @@
 # iOS roadmap
 
-Status: accepted high-level order on 2026-10-16. Baseline `6e00429`. Future phases are unstarted; documentation approval does not mark implementation complete.
+Status: accepted high-level order on 2026-10-16. Baseline `6e00429`. I01 is verified (user-reported, see its [phase spec](phases/I01-record-baseline-flow.md)); later phases are unstarted; documentation approval does not mark implementation complete.
 
 ## Retrospective
 
@@ -41,6 +41,9 @@ Execute one phase at a time, in order. Before code, write a short phase spec at 
 | I19 | Verify accessibility and visual resilience | Check VoiceOver, Dynamic Type, contrast, focus/order, control labels and largest supported text sizes |
 | I20 | Supply final app icon | Complete the 1024×1024 artwork slot and verify appearance in the app/launcher |
 | I21 | Prepare local release notes and verification checklist | Record version/build, privacy behavior, known limits, device checks, and reproducible build steps |
+| I22 | Decide and implement launch-state policy (added after I01) | Record in the [mission](mission.md) whether each state (running, paused, waiting for Break confirmation, completed) is restored or reset on relaunch, keeping deadline recovery for running phases unless the decision changes that invariant. Behavior matches the decision for every state, with tests and a manual relaunch check; I01 observed the app reopening in waiting-for-Break |
+| I23 | Make the active timer obvious (added after I01) | Design note in the phase spec, then the SwiftUI change: Focus and Break are visually distinct in running, paused, and waiting states. User-reported simulator screenshots show the active timer is identifiable at a glance; accessibility labels name it |
+| I24 | Design Focus-end and Break-end states (added after I01) | Design note in the phase spec, then the SwiftUI change: Focus end (waiting for Break confirmation) and Break end each have a clearly distinct presentation with the next action visible. It supplies the Break-end presentation I13 to I15 build on, so schedule it before I13 if that is wanted; user-reported screenshots confirm both ends are unmistakable |
 
 Add focused XCTest coverage with each behavior change after the test target exists. Use native UI tests for meaningful control/state interactions; use manual simulator and physical-device checks for OS notification behavior. Unit success does not prove delivery under system restrictions. If baseline checks fail, specify and resolve the smallest blocking defect before proceeding.
 
