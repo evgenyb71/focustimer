@@ -5,6 +5,7 @@
 - Add a manual-only `start-phase` project skill that picks the next unverified iOS roadmap phase, asks about scope, decisions, and validation, then creates the branch and phase spec; reference it from `AGENTS.md` and `CLAUDE.md`.
 - Record phase I01: the Xcode 27.0 simulator build succeeded and the user reported the Focus → confirmation → Break core flow validated on an iPhone 18 Pro Max simulator (iOS 27); notification appearance remains unverified.
 - Add roadmap phases I22 to I24 for the launch-state policy, a clearer active-timer indicator, and distinct Focus-end and Break-end states.
+- Move verified roadmap phases into a completed table with date, phase spec link, and pushed commit.
 - Require agents to ask for explicit confirmation before any remove or delete command.
 
 ## 2026-10-16

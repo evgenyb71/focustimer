@@ -1,6 +1,6 @@
 # iOS roadmap
 
-Status: accepted high-level order on 2026-10-16. Baseline `6e00429`. I01 is verified (user-reported, see its [phase spec](phases/I01-record-baseline-flow.md)); later phases are unstarted; documentation approval does not mark implementation complete.
+Status: accepted high-level order on 2026-10-16. Baseline `6e00429`. Completed phases are listed in the table below; the others are unstarted; documentation approval does not mark implementation complete.
 
 ## Retrospective
 
@@ -14,13 +14,20 @@ Status: accepted high-level order on 2026-10-16. Baseline `6e00429`. I01 is veri
 
 The archived status reports simulator build/install/launch and initial-screen inspection for I-R03. Full flow, lifecycle, and notification QA remain unverified. These rows describe implemented capabilities, not completion of the future acceptance checks.
 
+## Completed phases
+
+Move a phase here when its phase spec is marked verified and the work is pushed. Link the phase spec for evidence and limitations.
+
+| Phase | Deliverable | Verified | Phase spec | Pushed |
+| --- | --- | --- | --- | --- |
+| I01 | Recorded build and manual Focus → confirmation → Break flow (user-reported, iPhone 18 Pro Max simulator, iOS 27, Xcode 27.0) | 2026-10-19 | [I01-record-baseline-flow](phases/I01-record-baseline-flow.md) | `ce8fa8b` on `main` |
+
 ## Small forward phases
 
 Execute one phase at a time, in order. Before code, write a short phase spec at `specs/ios/phases/Ixx-short-name.md` covering intended behavior, non-goals, affected components, and concrete acceptance checks. Update it with evidence and limitations after verification. Split a phase further if it cannot fit a focused, reviewable change; do not bundle later features into a refactor.
 
 | Phase | Small deliverable | Exit check |
 | --- | --- | --- |
-| I01 | Record current build and manual Focus → confirmation → Break flow | Save actual simulator/device, OS, result, and any failures; no assumed historical pass |
 | I02 | Manually exercise pause/resume, cancel, relaunch, suspension, notification permission/actions | Record a state/action matrix; separate code defects from OS behavior |
 | I03 | Inject one clock dependency into timer logic | Existing flow preserved; production uses Date; tests can control now |
 | I04 | Inject one consistent persistence store | All reads/writes use the supplied store; isolated defaults do not affect production data |
@@ -53,7 +60,7 @@ App Store submission, store screenshots/privacy forms, signing/distribution auto
 
 ## Completion discipline
 
-Mark each phase planned, in progress, or verified in its phase document; reference the implementing commit and actual acceptance evidence. Keep this roadmap's status current. Invoke `$update-changelog` manually before merging. A spec update alone is not proof that code exists or acceptance checks passed.
+Mark each phase planned, in progress, or verified in its phase document; reference the implementing commit and actual acceptance evidence. When a phase is verified and pushed, move its row from the forward table to the completed table with the date, phase spec link, and pushed commit. Keep this roadmap's status current. Invoke `$update-changelog` manually before merging. A spec update alone is not proof that code exists or acceptance checks passed.
 
 ## References
 
