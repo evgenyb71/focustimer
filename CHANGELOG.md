@@ -7,6 +7,7 @@
 - Add roadmap phases I22 to I24 for the launch-state policy, a clearer active-timer indicator, and distinct Focus-end and Break-end states.
 - Move verified roadmap phases into a completed table with date, phase spec link, and pushed commit.
 - Require agents to ask for explicit confirmation before any remove or delete command.
+- Record phase I02: pause/resume, cancel, and relaunch checks passed on the simulator (user-reported, plus agent-run relaunch checks on an iPhone 17 Pro, iOS 26.5) with no defects found; suspension, notification, and remaining relaunch rows are deferred and unverified. Add the I02 phase spec and move I02 to the roadmap's completed table, and note in I22 that relaunching mid-timer should restore the phase and correct time remaining.
 
 ## 2026-10-16
 
