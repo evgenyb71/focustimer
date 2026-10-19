@@ -21,7 +21,7 @@ Move a phase here when its phase spec is marked verified and the work is pushed.
 | Phase | Deliverable | Verified | Phase spec | Pushed |
 | --- | --- | --- | --- | --- |
 | I01 | Recorded build and manual Focus → confirmation → Break flow (user-reported, iPhone 18 Pro Max simulator, iOS 27, Xcode 27.0) | 2026-10-19 | [I01-record-baseline-flow](phases/I01-record-baseline-flow.md) | `ce8fa8b` on `main` |
-| I02 | Pause/resume, cancel, relaunch exercised; matrix recorded, no defects found. Deferred, unverified: R3, R5, S1-S3, N1-N8 (suspension, notifications) | 2026-10-19 | [I02-exercise-lifecycle-notifications](phases/I02-exercise-lifecycle-notifications.md) | pending push on `feat/I02-exercise-lifecycle-notifications` |
+| I02 | Pause/resume, cancel, relaunch exercised; matrix recorded, no defects found. Deferred, unverified: R3, R5, S1-S3, N1-N8 (suspension, notifications) | 2026-10-19 | [I02-exercise-lifecycle-notifications](phases/I02-exercise-lifecycle-notifications.md) | `2b25b16` on `main` |
 
 ## Small forward phases
 
