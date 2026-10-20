@@ -1,6 +1,6 @@
 # I06 Baseline transition and deadline tests
 
-Status: in progress (2026-10-20); groups 1 and 2 committed (`06b2eef`, `65c81f8`); group 3 tests added and all tests pass (agent-run), not committed; user Cmd+U and close-out pending.
+Status: verified (2026-10-20): 36 test functions (44 cases including parameterized) pass except one known issue owned by I12, agent-run with counts from the result bundle (iPhone 17 Pro, iOS 26.5) and user-reported Cmd+U; no app code changed. Commits `06b2eef`, `65c81f8`, `77f91b9`.
 
 Context: [mission](../mission.md), [tech stack](../tech-stack.md), previous phase [I05](I05-notification-boundary-tests.md).
 
@@ -69,8 +69,9 @@ Single authoritative timer state, explicit Break confirmation, local persistence
 4. Defects, verification, and close-out
    - [x] For any failing expectation: classify as in-scope defect (fix with own commit and test) or later-phase topic (`withKnownIssue` plus a note here).
    - [x] Run `xcodebuild test`; confirm counts from the result bundle; record. Simulator flow check only if production code changed.
-   - [ ] Record the user's Cmd+U result.
-   - [ ] Set status to verified only with evidence; move I06 to the roadmap's completed table; the user runs `/update-changelog` before merging.
+   - [x] Record the user's Cmd+U result.
+   - [x] Set status to verified only with evidence; move I06 to the roadmap's completed table.
+   - [ ] The user runs `/update-changelog` before merging; fill in the pushed commit in the roadmap after the push.
 
 ## Validation
 
@@ -120,3 +121,14 @@ Run the tests in Xcode with Cmd+U on any iOS 26+ simulator; report pass or fail 
 - First run (`/tmp/FocusTimerTests-20261020-152807.xcresult`): 2 failures, both test-design mistakes, not app defects. Each test shares one in-memory store, so a second `TimerStore` created later in the same test loads the first one's saved state (a relaunch): the "idle" timer in the display test showed 0 (waiting) and in the notification test was paused Focus. The group 2 test `startFocusIsIgnoredOutsideIdle` had the same latent ordering and passed by coincidence. Fix: every test that built two unrelated timers was split into single-timer tests (`startFocusIsIgnoredWhileRunning`/`WhileWaiting`, `startBreakIsIgnoredWhenIdle`/`WhileFocusRuns`, `pauseIsIgnoredWhenIdle`/`WhileWaiting`, and the two notification and display splits above); a script check confirmed no test body creates more than one timer except the cancel test's mutually exclusive switch branches. Relaunch tests share the store on purpose.
 - Final run: result bundle `/tmp/FocusTimerTests-20261020-152947.xcresult`, iPhone 17 Pro, iOS 26.5, Xcode 27.0; `** TEST SUCCEEDED **`. Summary: `result: Passed`; 36 test functions (`totalTestCount: 36`: 35 passed, 1 expected failure, 0 failed, 0 skipped); counting parameterized cases, 43 passed and 1 expected failure. The only non-passing test is the I12 known issue `pauseAtExpiryCompletesInsteadOfAddingTime` (Expected Failure). No compiler warnings; only the unrelated `appintentsmetadataprocessor` tool warning.
 - No app defects found in I06 scope, so no production code changed and the simulator flow check is not needed.
+
+### User-reported tests (2026-10-20)
+
+- The user ran the tests in Xcode with Cmd+U: all 36 passed except one failure shown as expected (the I12 known issue `pauseAtExpiryCompletesInsteadOfAddingTime`). The simulator used was not itemized.
+
+### Close-out (2026-10-20)
+
+- Exit check met: tests cover Focus/Break, explicit confirmation, pause and resume, cancel, and delayed reconciliation, plus relaunch from the store, the notification OK path, and the displayed countdown.
+- [Roadmap](../roadmap.md): I06 moved to the completed table; pushed commit pending.
+- Known issue carried forward: pause at or after expiry stores 1 s remaining instead of completing (owned by I12; marked with `withKnownIssue`, which fails once fixed so the marker gets removed).
+- Remaining limitations: no app code changed in this phase; OS notification delivery, the real OK action, denied permission, suspension, and physical device remain the deferred I02 rows; duration bounds and invalid stored state are untested until I07.
