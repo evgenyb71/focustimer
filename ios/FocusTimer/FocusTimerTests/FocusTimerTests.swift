@@ -193,28 +193,43 @@ struct TimerStoreTransitionTests {
         #expect(timer.state.phase == .runningB)
     }
 
-    @Test func startFocusIsIgnoredOutsideIdle() {
-        let running = makeRunning(.focus)
-        let runningState = running.state
-        running.startFocus()
-        #expect(running.state == runningState)
+    @Test func startFocusIsIgnoredWhileRunning() {
+        let timer = makeRunning(.focus)
+        let runningState = timer.state
 
-        let waiting = makeWaitingForBreak()
+        timer.startFocus()
+
+        #expect(timer.state == runningState)
+        #expect(notifications.calls.count == 1)
+    }
+
+    @Test func startFocusIsIgnoredWhileWaiting() {
+        let timer = makeWaitingForBreak()
         let callCount = notifications.calls.count
-        waiting.startFocus()
-        #expect(waiting.state.phase == .waitingForAConfirm)
+
+        timer.startFocus()
+
+        #expect(timer.state == TimerStore.TimerState(phase: .waitingForAConfirm))
         #expect(notifications.calls.count == callCount)
     }
 
-    @Test func startBreakIsIgnoredOutsideWaiting() {
-        let idle = makeTimer()
-        idle.startBreak()
-        #expect(idle.state.phase == .idle)
+    @Test func startBreakIsIgnoredWhenIdle() {
+        let timer = makeTimer()
 
-        let running = makeRunning(.focus)
-        let runningState = running.state
-        running.startBreak()
-        #expect(running.state == runningState)
+        timer.startBreak()
+
+        #expect(timer.state == TimerStore.TimerState())
+        #expect(notifications.calls.isEmpty)
+    }
+
+    @Test func startBreakIsIgnoredWhileFocusRuns() {
+        let timer = makeRunning(.focus)
+        let runningState = timer.state
+
+        timer.startBreak()
+
+        #expect(timer.state == runningState)
+        #expect(notifications.calls.count == 1)
     }
 
     @Test func focusExpiryWaitsForConfirmation() {
@@ -302,15 +317,22 @@ struct TimerStoreTransitionTests {
         #expect(notifications.calls.last == .schedule(phase: storePhase(phase), deadline: deadline, now: resumedAt))
     }
 
-    @Test func pauseIsIgnoredOutsideRunningPhases() {
-        let idle = makeTimer()
-        idle.pauseOrResume()
-        #expect(idle.state == TimerStore.TimerState())
+    @Test func pauseIsIgnoredWhenIdle() {
+        let timer = makeTimer()
 
-        let waiting = makeWaitingForBreak()
+        timer.pauseOrResume()
+
+        #expect(timer.state == TimerStore.TimerState())
+        #expect(notifications.calls.isEmpty)
+    }
+
+    @Test func pauseIsIgnoredWhileWaiting() {
+        let timer = makeWaitingForBreak()
         let callCount = notifications.calls.count
-        waiting.pauseOrResume()
-        #expect(waiting.state == TimerStore.TimerState(phase: .waitingForAConfirm))
+
+        timer.pauseOrResume()
+
+        #expect(timer.state == TimerStore.TimerState(phase: .waitingForAConfirm))
         #expect(notifications.calls.count == callCount)
     }
 
@@ -378,5 +400,182 @@ struct TimerStoreTransitionTests {
 
         #expect(timer.state == TimerStore.TimerState())
         #expect(notifications.calls.count == callCount)
+    }
+}
+
+extension TimerStoreTransitionTests {
+    func relaunch() -> TimerStore {
+        TimerStore(clock: clock, store: store, notifications: notifications)
+    }
+
+    var savedDurations: TimerStore.Configuration {
+        TimerStore.Configuration(durationASeconds: focusSeconds, durationBSeconds: breakSeconds)
+    }
+
+    // MARK: Relaunch from the saved store
+
+    @Test(arguments: TimedPhase.allCases)
+    func relaunchBeforeDeadlineRestoresRunningPhase(_ phase: TimedPhase) {
+        let timer = makeRunning(phase)
+        let runningState = timer.state
+        let callCount = notifications.calls.count
+        clock.advance(by: 10)
+
+        let relaunched = relaunch()
+
+        #expect(relaunched.state == runningState)
+        #expect(relaunched.configuration == savedDurations)
+        #expect(notifications.calls.count == callCount)
+    }
+
+    @Test func relaunchAfterFocusDeadlineWaitsForConfirmation() {
+        _ = makeRunning(.focus)
+        clock.advance(by: TimeInterval(focusSeconds + 1_000))
+
+        let relaunched = relaunch()
+
+        #expect(relaunched.state == TimerStore.TimerState(phase: .waitingForAConfirm))
+        #expect(savedState() == relaunched.state)
+        #expect(notifications.calls.count == 1)
+    }
+
+    @Test func relaunchAfterBreakDeadlineReturnsToIdle() {
+        _ = makeRunning(.breakTime)
+        clock.advance(by: TimeInterval(breakSeconds + 1_000))
+
+        let relaunched = relaunch()
+
+        #expect(relaunched.state == TimerStore.TimerState())
+        #expect(relaunched.configuration == savedDurations)
+        #expect(savedState() == TimerStore.TimerState())
+    }
+
+    @Test(arguments: TimedPhase.allCases)
+    func relaunchWhilePausedKeepsRemainingTime(_ phase: TimedPhase) {
+        let timer = makeRunning(phase)
+        clock.advance(by: 10)
+        timer.pauseOrResume()
+        clock.advance(by: 10_000)
+
+        let relaunched = relaunch()
+
+        #expect(relaunched.state == TimerStore.TimerState(
+            phase: storePhase(phase),
+            endTimestamp: nil,
+            paused: true,
+            remainingSeconds: duration(phase) - 10
+        ))
+    }
+
+    @Test func relaunchWhileWaitingStaysWaiting() {
+        _ = makeWaitingForBreak()
+        clock.advance(by: 10_000)
+
+        let relaunched = relaunch()
+
+        #expect(relaunched.state == TimerStore.TimerState(phase: .waitingForAConfirm))
+        #expect(relaunched.configuration == savedDurations)
+    }
+
+    // MARK: Notification OK path
+
+    @Test func notificationOKAfterFocusExpiryStartsBreakOnce() {
+        let timer = makeRunning(.focus)
+        clock.advance(by: TimeInterval(focusSeconds + 5))
+        let confirmedAt = clock.now
+
+        timer.startBreakFromNotification()
+
+        let breakState = TimerStore.TimerState(
+            phase: .runningB,
+            endTimestamp: confirmedAt.addingTimeInterval(TimeInterval(breakSeconds)),
+            paused: false,
+            remainingSeconds: nil
+        )
+        #expect(timer.state == breakState)
+        #expect(notifications.calls.last == .schedule(
+            phase: .runningB,
+            deadline: confirmedAt.addingTimeInterval(TimeInterval(breakSeconds)),
+            now: confirmedAt
+        ))
+
+        let callCount = notifications.calls.count
+        clock.advance(by: 2)
+        timer.startBreakFromNotification()
+
+        #expect(timer.state == breakState)
+        #expect(notifications.calls.count == callCount)
+    }
+
+    @Test func notificationOKBeforeFocusExpiryDoesNothing() {
+        let timer = makeRunning(.focus)
+        let runningState = timer.state
+        clock.advance(by: 10)
+
+        timer.startBreakFromNotification()
+
+        #expect(timer.state == runningState)
+        #expect(notifications.calls.count == 1)
+    }
+
+    @Test func notificationOKWhilePausedDoesNothing() {
+        let timer = makeRunning(.focus)
+        timer.pauseOrResume()
+        let pausedState = timer.state
+        clock.advance(by: TimeInterval(focusSeconds + 5))
+
+        timer.startBreakFromNotification()
+
+        #expect(timer.state == pausedState)
+    }
+
+    @Test func notificationOKWhenIdleDoesNothing() {
+        let timer = makeTimer()
+
+        timer.startBreakFromNotification()
+
+        #expect(timer.state == TimerStore.TimerState())
+        #expect(notifications.calls.isEmpty)
+    }
+
+    // MARK: Display countdown
+
+    @Test func displayWhileRunningRoundsUp() {
+        let timer = makeRunning(.focus)
+        #expect(timer.displayedSeconds == focusSeconds)
+
+        clock.advance(by: 0.4)
+        timer.reconcileWithCurrentTime()
+        #expect(timer.displayedSeconds == focusSeconds)
+
+        clock.advance(by: 0.6)
+        timer.reconcileWithCurrentTime()
+        #expect(timer.displayedSeconds == focusSeconds - 1)
+    }
+
+    @Test func displayWhilePausedShowsRemainingTime() {
+        let timer = makeRunning(.focus)
+        clock.advance(by: 10.5)
+        timer.pauseOrResume()
+        #expect(timer.displayedSeconds == focusSeconds - 10)
+
+        clock.advance(by: 1_000)
+        timer.reconcileWithCurrentTime()
+        #expect(timer.displayedSeconds == focusSeconds - 10)
+    }
+
+    @Test func displayIsZeroWhileWaiting() {
+        let timer = makeWaitingForBreak()
+
+        #expect(timer.displayedSeconds == 0)
+    }
+
+    @Test func displayIsNilWhenIdle() {
+        let timer = makeTimer()
+        #expect(timer.displayedSeconds == nil)
+
+        timer.startFocus()
+        timer.cancel()
+        #expect(timer.displayedSeconds == nil)
     }
 }

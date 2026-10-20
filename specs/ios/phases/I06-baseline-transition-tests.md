@@ -1,6 +1,6 @@
 # I06 Baseline transition and deadline tests
 
-Status: in progress (2026-10-20); plan groups 1 and 2 done and tests pass (agent-run), not committed; group 3 (relaunch, notification path, display) pending. Implements roadmap phase I06 in the [iOS roadmap](../roadmap.md).
+Status: in progress (2026-10-20); groups 1 and 2 committed (`06b2eef`, `65c81f8`); group 3 tests added and all tests pass (agent-run), not committed; user Cmd+U and close-out pending.
 
 Context: [mission](../mission.md), [tech stack](../tech-stack.md), previous phase [I05](I05-notification-boundary-tests.md).
 
@@ -63,12 +63,12 @@ Single authoritative timer state, explicit Break confirmation, local persistence
    - [x] Cancel from running, paused, and waiting.
    - [x] Delayed reconciliation for Focus and Break.
 3. Relaunch, notification path, and display tests (commit)
-   - [ ] Relaunch from the same store: running before and after the deadline, paused, waiting, Break after the deadline.
-   - [ ] `startBreakFromNotification`: after expiry, repeated, early, idle.
-   - [ ] `displayedSeconds` in each state.
+   - [x] Relaunch from the same store: running before and after the deadline, paused, waiting, Break after the deadline.
+   - [x] `startBreakFromNotification`: after expiry, repeated, early, idle.
+   - [x] `displayedSeconds` in each state.
 4. Defects, verification, and close-out
-   - [ ] For any failing expectation: classify as in-scope defect (fix with own commit and test) or later-phase topic (`withKnownIssue` plus a note here).
-   - [ ] Run `xcodebuild test`; confirm counts from the result bundle; record. Simulator flow check only if production code changed.
+   - [x] For any failing expectation: classify as in-scope defect (fix with own commit and test) or later-phase topic (`withKnownIssue` plus a note here).
+   - [x] Run `xcodebuild test`; confirm counts from the result bundle; record. Simulator flow check only if production code changed.
    - [ ] Record the user's Cmd+U result.
    - [ ] Set status to verified only with evidence; move I06 to the roadmap's completed table; the user runs `/update-changelog` before merging.
 
@@ -110,3 +110,13 @@ Run the tests in Xcode with Cmd+U on any iOS 26+ simulator; report pass or fail 
 - Command: the Validation test command, result bundle `/tmp/FocusTimerTests-20261020-150612.xcresult`, iPhone 17 Pro, iOS 26.5, Xcode 27.0. `** TEST SUCCEEDED **`.
 - Result bundle summary: `result: Passed`; 20 test functions (`totalTestCount: 20`: 19 passed, 1 expected failure, 0 failed, 0 skipped); counting parameterized cases, 25 passed and 1 expected failure. The per-test tree lists all six I05 tests and every I06 test and argument as Passed, except the known issue as Expected Failure. No compiler warnings; only the unrelated `appintentsmetadataprocessor` tool warning.
 - No defects requiring a fix in this phase were found.
+
+### Plan group 3: relaunch, notification OK path, and display tests (agent-run, 2026-10-20)
+
+- Added as an extension of `TimerStoreTransitionTests` in `FocusTimerTests.swift`, with a `relaunch()` helper that builds a second `TimerStore` from the same clock, store, and scheduler. No app code changed.
+- Relaunch: `relaunchBeforeDeadlineRestoresRunningPhase` (Focus and Break: same state and saved durations, no new notification calls), `relaunchAfterFocusDeadlineWaitsForConfirmation`, `relaunchAfterBreakDeadlineReturnsToIdle` (logic of deferred I02 R5), `relaunchWhilePausedKeepsRemainingTime` (Focus and Break; logic of deferred I02 R3), `relaunchWhileWaitingStaysWaiting`.
+- Notification OK path: `notificationOKAfterFocusExpiryStartsBreakOnce` (reconciles, starts Break at the call time, schedules one Break completion; a second call changes nothing), `notificationOKBeforeFocusExpiryDoesNothing`, `notificationOKWhilePausedDoesNothing`, `notificationOKWhenIdleDoesNothing`.
+- Display: `displayWhileRunningRoundsUp` (120 at start and after 0.4 s, 119 after 1 s), `displayWhilePausedShowsRemainingTime` (paused at 10.5 s shows 110 and stays there), `displayIsZeroWhileWaiting`, `displayIsNilWhenIdle` (fresh and after cancel).
+- First run (`/tmp/FocusTimerTests-20261020-152807.xcresult`): 2 failures, both test-design mistakes, not app defects. Each test shares one in-memory store, so a second `TimerStore` created later in the same test loads the first one's saved state (a relaunch): the "idle" timer in the display test showed 0 (waiting) and in the notification test was paused Focus. The group 2 test `startFocusIsIgnoredOutsideIdle` had the same latent ordering and passed by coincidence. Fix: every test that built two unrelated timers was split into single-timer tests (`startFocusIsIgnoredWhileRunning`/`WhileWaiting`, `startBreakIsIgnoredWhenIdle`/`WhileFocusRuns`, `pauseIsIgnoredWhenIdle`/`WhileWaiting`, and the two notification and display splits above); a script check confirmed no test body creates more than one timer except the cancel test's mutually exclusive switch branches. Relaunch tests share the store on purpose.
+- Final run: result bundle `/tmp/FocusTimerTests-20261020-152947.xcresult`, iPhone 17 Pro, iOS 26.5, Xcode 27.0; `** TEST SUCCEEDED **`. Summary: `result: Passed`; 36 test functions (`totalTestCount: 36`: 35 passed, 1 expected failure, 0 failed, 0 skipped); counting parameterized cases, 43 passed and 1 expected failure. The only non-passing test is the I12 known issue `pauseAtExpiryCompletesInsteadOfAddingTime` (Expected Failure). No compiler warnings; only the unrelated `appintentsmetadataprocessor` tool warning.
+- No app defects found in I06 scope, so no production code changed and the simulator flow check is not needed.
