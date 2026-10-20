@@ -1,6 +1,6 @@
 # I08 Schema versioning and migration of current records
 
-Status: verified (2026-10-20): 55 test functions (54 passed, 1 expected failure owned by I12), agent-run with counts from the result bundle (iPhone 17 Pro, iOS 26.5); user-reported Cmd+U and an upgrade check on real pre-I08 saved data (iPhone 18 Pro Max, iOS 27.0). Not yet committed. Implements roadmap phase I08, "Add schema versioning and migration of current records". Branch `feat/I08-schema-versioning`.
+Status: verified (2026-10-20): 55 test functions (54 passed, 1 expected failure owned by I12), agent-run with counts from the result bundle (iPhone 17 Pro, iOS 26.5); user-reported Cmd+U and an upgrade check on real pre-I08 saved data (iPhone 18 Pro Max, iOS 27.0). Commit `1af9f24`, merged to `main` as `7625c58` and pushed. Implements roadmap phase I08, "Add schema versioning and migration of current records". Branch `feat/I08-schema-versioning`.
 
 Context: [roadmap](../roadmap.md), [mission](../mission.md), [tech stack](../tech-stack.md), previous phase [I07](I07-enforce-invariants.md).
 
@@ -124,10 +124,8 @@ Newer or unsupported versions beyond keeping them intact at launch (I09). OS not
 
 For any agent (Claude Code, Codex) picking up the iOS work.
 
-- **State:** I01 to I08 are verified. I08 was committed together with this handoff on `feat/I08-schema-versioning`, merged into `main` with `--no-ff`, and pushed; before that merge, `main` was at `8845216`. `$update-changelog` was run for I08 before merging, and the changelog also covers the earlier I07 roadmap and handoff commits.
-- **Next step:**
-  1. On a short `chore/` branch, move the I08 roadmap row to the completed table with the merge commit, and replace "Not yet committed." in this spec's status line with the commit and merge.
-  2. Then start I09 with `$start-phase` / `/start-phase`; no I09 spec exists yet.
+- **State:** I01 to I08 are verified. I08 was committed together with this handoff on `feat/I08-schema-versioning`, merged into `main` with `--no-ff` as `7625c58`, and pushed. The roadmap lists I08 as completed. The feature branch is deleted. `$update-changelog` was run for I08 before merging, and the changelog also covers the earlier I07 roadmap and handoff commits.
+- **Next step:** start I09 with `$start-phase` / `/start-phase`; no I09 spec exists yet.
 - **Decided in chat:** everything decided for I08 is recorded in this spec.
 - **Open questions for I09** (recover corrupt, partial, or unsupported saved records; exit check: safe idle fallback, valid config preserved, relaunch remains usable):
   - **Newer or unreadable `schemaVersion`:** keep today's behavior (defaults in memory, nothing written at launch), or reset the version and records? Should later saves be allowed to overwrite the records while the newer version stays?
