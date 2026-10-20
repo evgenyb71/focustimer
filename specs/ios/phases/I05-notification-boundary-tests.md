@@ -1,6 +1,6 @@
 # I05 Notification boundary and first unit-test target
 
-Status: in progress (2026-10-20); boundary committed in `2b3ce71`; test target added and 6 tests pass (agent-run), not committed; documentation, simulator flow check, and user Cmd+U pending. Implements roadmap phase I05 in the [iOS roadmap](../roadmap.md).
+Status: verified (2026-10-20): 6 Swift Testing tests pass (agent-run `xcodebuild test`, count confirmed from the result bundle, iPhone 17 Pro iOS 26.5; user-reported Cmd+U twice, all 6 passed); agent simulator flow check passed. Boundary in `2b3ce71`, test target and tests in `7a1a9f5`. Implements roadmap phase I05 in the [iOS roadmap](../roadmap.md).
 
 Context: [mission](../mission.md), [tech stack](../tech-stack.md), previous phase [I03-I04](I03-I04-inject-clock-and-store.md).
 
@@ -67,10 +67,11 @@ Single authoritative timer state (`TimerStore.shared` stays the only production 
    - [x] Add focused tests, for example: Start Focus schedules one Focus completion at now + Focus duration; Pause cancels the Focus completion; Resume schedules again at now + remaining; Cancel cancels all; Start Break after Focus expiry schedules one Break completion.
    - [x] Run `xcodebuild test`; record the command, destination, and result.
 4. Documentation and close-out (agent)
-   - [ ] Add the test command and destination to `AGENTS.md` and the tech stack; update the framework wording.
-   - [ ] Replace "pending push" in the roadmap's I03-I04 row with `cb2b3aa` on `main`.
-   - [ ] Agent simulator flow check; record user Cmd+U result.
-   - [ ] Set status to verified only with evidence; move I05 to the roadmap's completed table; the user runs `/update-changelog` before merging.
+   - [x] Add the test command and destination to `AGENTS.md` and the tech stack; update the framework wording.
+   - [x] Replace "pending push" in the roadmap's I03-I04 row with `cb2b3aa` on `main`.
+   - [x] Agent simulator flow check; record user Cmd+U result.
+   - [x] Set status to verified only with evidence; move I05 to the roadmap's completed table.
+   - [ ] The user runs `/update-changelog` before merging; fill in the pushed commit in the roadmap after the push.
 
 ## Validation
 
@@ -132,3 +133,31 @@ Run the FocusTimer scheme's tests in Xcode (Product > Test, Cmd+U) on any iOS 26
 
 - Result: `** TEST SUCCEEDED **`; `xcrun xcresulttool get test-results summary` reports `result: Passed`, `totalTestCount: 6`, `passedTests: 6`, `failedTests: 0`, `skippedTests: 0`, device iPhone 17 Pro, iOS 26.5. Test binary `__text` size 78120 bytes. No compiler warnings; only the unrelated `appintentsmetadataprocessor` tool warning.
 - Passed tests in `TimerStoreNotificationTests`: `startFocusSchedulesFocusCompletion`, `pauseCancelsFocusCompletion`, `resumeSchedulesFromRemainingTime`, `cancelCancelsAllCompletions`, `breakIsScheduledOnlyAfterConfirmation`, `persistsThroughInjectedStore`. Together they show the recording double observing schedule (with deterministic deadlines from the fake clock), cancel-for-phase, and cancel-all calls, Break scheduled only after confirmation, and writes going to the injected in-memory store.
+
+### Plan group 4: documentation and flow check (agent-run, 2026-10-20)
+
+- `AGENTS.md`: layout entry names the `FocusTimerTests` target, Swift Testing for unit tests, XCTest reserved for UI tests; the "no test runner" sentence now points to `xcodebuild test`; the test command and the rule to confirm the executed count from the result bundle replace the "none exist yet" note.
+- [Tech stack](../tech-stack.md): Testing row, source map (`NotificationScheduler.swift` contents, `FocusTimerTests/`), test command, and the gap note (notification boundary injected; delegate setup still static) updated; status line dated for I05.
+- [Roadmap](../roadmap.md): I03-I04 completed row now shows `cb2b3aa` on `main`.
+- Simulator flow check: iPhone 17 Pro, iOS 26.5; app built from the same sources as `7a1a9f5` (binary contains `SystemNotificationScheduler` and `NotificationScheduling`), installed over the I03-I04 build, one-minute durations.
+
+| Step | Observed | Result |
+| --- | --- | --- |
+| Start | 00:58 running at 13:23:32 | Pass |
+| Pause | "Focus paused" 00:57 at 13:23:34, unchanged at 13:23:39 | Pass |
+| Resume | 00:55 running at 13:23:57 | Pass |
+| Cancel | Ready with 1 min / 1 min at 13:23:59 | Pass |
+| Focus to expiry | Started 13:24:12; at 13:25:15 "Focus timer complete", 00:00, Start Break, with foreground banner "Focus Timer complete / Tap OK to start Break Timer." | Pass |
+| Break to expiry | 00:59 at 13:25:30; at 13:26:32 Ready with 1 min / 1 min and foreground banner "Break Timer complete / Sequence finished." | Pass |
+
+- The banners show the injected `SystemNotificationScheduler` still schedules real completion notifications with the same content. Background delivery, the OK action, and denied permission remain the deferred I02 N rows.
+
+### User-reported tests (2026-10-20)
+
+- The user ran the tests in Xcode with Cmd+U twice; both runs showed all 6 tests passed. The simulator used was not itemized.
+
+### Close-out (2026-10-20)
+
+- Exit check met: the recording double observes schedule and cancel calls (6 passing tests), and the test command is documented in `AGENTS.md` and the [tech stack](../tech-stack.md) and has been run by the agent and the user.
+- [Roadmap](../roadmap.md): I05 moved to the completed table; pushed commit pending.
+- Remaining limitations: the test bundle ID stays `com.boch.FocusTimerTests` by the user's decision; the app delegate's category setup and authorization request remain static; background notification delivery, the OK action, and denied permission are still the deferred I02 N rows; tests cover notification calls only, with broad transition and deadline tests in I06; physical device not checked.

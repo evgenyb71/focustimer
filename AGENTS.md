@@ -30,11 +30,11 @@ Several models and tools (for example Claude Code and Codex) work on this reposi
 
 - `chrome/src/`, `chrome/assets/`, `chrome/manifest.json`: plain JavaScript/HTML/CSS, Manifest V3, no dependencies or build step.
 - `ios/FocusTimer/FocusTimer/`: Swift 6, SwiftUI, Foundation, UIKit lifecycle bridge, UserDefaults, UserNotifications. iPhone only, portrait, minimum iOS 26.0; Apple frameworks only.
-- `ios/FocusTimer/FocusTimer.xcodeproj`: FocusTimer scheme and app target. Keep future native XCTest targets beside the app in this project, with `*Tests.swift` filenames.
+- `ios/FocusTimer/FocusTimer.xcodeproj`: FocusTimer scheme, app target, and the `FocusTimerTests` unit-test target (`ios/FocusTimer/FocusTimerTests/`, hosted by the app). Unit tests use Swift Testing (`import Testing`); reserve XCTest for a future UI-test target. Keep test targets beside the app in this project, with `*Tests.swift` filenames.
 - `specs/`: active platform constitutions, future phase specs, historical references.
 - Root `README.md`: navigation and local setup; `CHANGELOG.md`: dated project changes.
 
-Follow the style of touched files: 2-space JavaScript indentation, 4-space Swift indentation; camelCase values/functions and PascalCase Swift types. No formatter, linter, or test runner is configured today. Do not invent npm commands or claim test targets exist.
+Follow the style of touched files: 2-space JavaScript indentation, 4-space Swift indentation; camelCase values/functions and PascalCase Swift types. No formatter or linter is configured. The only test runner is `xcodebuild test` (or Product > Test in Xcode) for the FocusTimer scheme; do not invent npm commands.
 
 ## Build and verification
 
@@ -52,7 +52,15 @@ After those checks, a simulator build from the repository root can use:
 xcodebuild -project ios/FocusTimer/FocusTimer.xcodeproj -scheme FocusTimer -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/FocusTimerDerivedData CODE_SIGNING_ALLOWED=NO build
 ```
 
-Simulator builds need no signing credentials; keep `CODE_SIGNING_ALLOWED=NO` limited to the command invocation. Add the exact `xcodebuild test` command and installed simulator destination here when XCTest targets exist; none exist yet. The historical simulator build/launch checks do not establish full-flow verification. Check lifecycle and OS notifications separately from deterministic unit tests.
+Simulator builds need no signing credentials; keep `CODE_SIGNING_ALLOWED=NO` limited to the command invocation.
+
+Run the unit tests on an installed iOS 26+ simulator that the user is not currently using (agents have used iPhone 17 Pro, iOS 26.5; check `xcrun simctl list` first):
+
+```sh
+xcodebuild -project ios/FocusTimer/FocusTimer.xcodeproj -scheme FocusTimer -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5' -derivedDataPath /tmp/FocusTimerDerivedData -resultBundlePath /tmp/FocusTimerTests-$(date +%Y%m%d-%H%M%S).xcresult CODE_SIGNING_ALLOWED=NO test
+```
+
+`** TEST SUCCEEDED **` alone is not evidence: a misconfigured target can run 0 tests and still succeed. Confirm the count with `xcrun xcresulttool get test-results summary --path <result bundle>` (`totalTestCount`, `passedTests`, `failedTests`) and record it. The historical simulator build/launch checks do not establish full-flow verification. Check lifecycle and OS notifications separately from deterministic unit tests.
 
 For documentation-only changes, verify links, archived-file fidelity when moving originals, and `git diff --check`; a simulator build is unnecessary.
 
