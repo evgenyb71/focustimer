@@ -65,13 +65,13 @@ struct ContentView: View {
             durationRow(
                 title: "Focus Timer",
                 seconds: $timer.configuration.durationASeconds,
-                range: 60...(240 * 60)
+                range: TimerStore.Configuration.focusRange
             )
             Divider()
             durationRow(
                 title: "Break Timer",
                 seconds: $timer.configuration.durationBSeconds,
-                range: 60...(120 * 60)
+                range: TimerStore.Configuration.breakRange
             )
         }
         .padding()

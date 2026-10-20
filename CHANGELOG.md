@@ -13,6 +13,9 @@
 - Record phase I06 as verified (36 tests on an iPhone 17 Pro simulator, iOS 26.5, with counts from the result bundle, plus user-reported Cmd+U; no app code changed) and move it to the roadmap's completed table.
 - Add a manual-only `end-session` project skill that shuts down agent-started simulators, brings the latest phase spec and roadmap up to date, and writes a handoff section so a new Claude Code or Codex session can continue from the repository; reference it from `AGENTS.md` and `CLAUDE.md`.
 - Add the first session handoff to the I06 phase spec (next phase I07 and its open decisions, known issues, test baseline, environment) and record the I06 merge commit in the roadmap.
+- Enforce duration bounds in `TimerStore`: saved and started durations are rounded to whole minutes and clamped to Focus 1–240 min and Break 1–120 min, replacing the one-second minimum check; the duration steppers read the same shared ranges.
+- Repair saved timer state that breaks the invariants at launch: fields that do not belong to the phase are removed, a running phase without a deadline becomes idle, and a paused phase without positive remaining time is treated as expired (Focus waits for Break confirmation, Break returns to idle). Repairs are saved, obsolete pending alerts are cancelled, and the status line shows "Saved timer data was corrected." until the next action.
+- Add 12 invariant tests and raise the transition-test Break duration to the new one-minute minimum. Record phase I07 as verified (48 tests on an iPhone 17 Pro simulator, iOS 26.5, with counts from the result bundle; user-reported Cmd+U and a simulator check of the correction message) and update the iOS mission and tech stack.
 
 ## 2026-10-19
 
