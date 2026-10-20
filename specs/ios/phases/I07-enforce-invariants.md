@@ -126,3 +126,21 @@ OS notification delivery and removal, real suspension and relaunch, and corrupt 
 - The repair runs only at load and only on records that decode. Undecodable or unknown-phase records still fall back silently to defaults (I09).
 - Remaining time or deadlines longer than the configured duration are not checked (I12).
 - Pausing at expiry during a live session still adds 1 s (known issue, I12).
+
+## Handoff for the next session (2026-10-20)
+
+For any agent (Claude Code, Codex) picking up the iOS work.
+
+- **State:** I01 to I07 are verified, merged, and pushed. `main` and `origin/main` are at `f087056` (I07 merge `627f7d5`, roadmap update `368d96c`). The only other local branch is `chore/handoff-2026-10-20`, which holds this handoff note. Nothing else is uncommitted or unpushed.
+- **Next step: I08** (schema versioning and migration of current records). Start it with `$start-phase` / `/start-phase`; no I08 spec exists yet.
+- **Decided in chat:** everything decided for I07 is recorded in this spec. The I06 idea of pairing I07 with I09 was decided against: I07 handles only records that decode, and I09 still owns corrupt, partial, and unsupported records.
+- **Open questions for I08:**
+  - Where the version lives: a field inside each record, or a separate key.
+  - Whether the existing unversioned `config` and `state` keys are migrated in place or rewritten under new keys.
+  - Whether migration runs before the I07 normalization and repair, which already run on every load.
+  - How a record with a newer, unknown version is treated. That is probably I09's job, but the boundary needs confirming with the user.
+- **Known issues:** `pauseAtExpiryCompletesInsteadOfAddingTime` is wrapped in `withKnownIssue` for I12; do not remove the marker unless fixing that behavior. Remaining time or deadlines longer than the configured duration are not checked (I12).
+- **Test baseline:** `/tmp/FocusTimerTests-20261020-165545.xcresult` has 48 test functions: 47 passed, 0 failed, 1 expected failure. That is 36 from I06 plus 12 `TimerStoreInvariantTests`, all in `ios/FocusTimer/FocusTimerTests/FocusTimerTests.swift`. The I06 transition fixture now uses `breakSeconds = 60`, because durations below one minute are clamped. The user reported 48 tests passing with Cmd+U.
+- **Environment:** `xcode-select` points at full Xcode 27.0 (27A266a). Agents run tests on iPhone 17 Pro (iOS 26.5), which is shut down. The user's device is the iPhone 18 Pro Max (iOS 27.0), still booted; leave it alone. Agent build output lives in `/tmp/FocusTimerDerivedData` (170 MB) and four `/tmp/FocusTimerTests-*.xcresult` bundles (52 MB); it is untracked and not deleted.
+- **Manual simulator checks that need saved data:** seed the app's container preferences, not the bare `defaults` domain, and only after the app is stopped. Xcode moves the data container on each Run or Test. See the method under "User-reported (Xcode)" above.
+- **Still deferred from I02:** suspension and OS notification rows S1 to S3 and N1 to N8 have not been run.
