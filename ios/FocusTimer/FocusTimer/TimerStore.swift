@@ -11,8 +11,24 @@ final class TimerStore: ObservableObject {
     }
 
     struct Configuration: Codable, Equatable {
+        static let focusRange = 60...(240 * 60)
+        static let breakRange = 60...(120 * 60)
+
         var durationASeconds: Int = 60
         var durationBSeconds: Int = 60
+
+        /// Each duration rounded to the nearest whole minute, then clamped to its range.
+        var normalized: Configuration {
+            Configuration(
+                durationASeconds: Self.normalize(durationASeconds, to: Self.focusRange),
+                durationBSeconds: Self.normalize(durationBSeconds, to: Self.breakRange)
+            )
+        }
+
+        private static func normalize(_ seconds: Int, to range: ClosedRange<Int>) -> Int {
+            let wholeMinutes = (Double(seconds) / 60).rounded() * 60
+            return Int(min(max(wholeMinutes, Double(range.lowerBound)), Double(range.upperBound)))
+        }
     }
 
     struct TimerState: Codable, Equatable {
@@ -20,14 +36,35 @@ final class TimerStore: ObservableObject {
         var endTimestamp: Date?
         var paused = false
         var remainingSeconds: Int?
+
+        /// Fields that do not belong to the phase are removed. A running phase without a
+        /// deadline falls back to idle; a paused phase without positive remaining time is
+        /// treated as expired, so Focus waits for Break confirmation and Break returns to idle.
+        var repaired: TimerState {
+            switch phase {
+            case .idle, .waitingForAConfirm:
+                return TimerState(phase: phase)
+            case .runningA, .runningB:
+                if paused {
+                    guard let remainingSeconds, remainingSeconds > 0 else {
+                        return TimerState(phase: phase == .runningA ? .waitingForAConfirm : .idle)
+                    }
+                    return TimerState(phase: phase, endTimestamp: nil, paused: true, remainingSeconds: remainingSeconds)
+                }
+                guard let endTimestamp else { return TimerState() }
+                return TimerState(phase: phase, endTimestamp: endTimestamp, paused: false, remainingSeconds: nil)
+            }
+        }
     }
+
+    static let repairNotice = "Saved timer data was corrected."
 
     static let shared = TimerStore()
 
     @Published var configuration: Configuration
     @Published private(set) var state: TimerState
     @Published private(set) var displayedSeconds: Int?
-    @Published private(set) var errorMessage: String?
+    @Published private(set) var noticeMessage: String?
 
     private let configurationKey = "config"
     private let stateKey = "state"
@@ -44,8 +81,22 @@ final class TimerStore: ObservableObject {
         self.clock = clock
         self.store = store
         self.notifications = notifications
-        configuration = Self.decode(Configuration.self, key: configurationKey, from: store) ?? Configuration()
-        state = Self.decode(TimerState.self, key: stateKey, from: store) ?? TimerState()
+        let savedConfiguration = Self.decode(Configuration.self, key: configurationKey, from: store) ?? Configuration()
+        let savedState = Self.decode(TimerState.self, key: stateKey, from: store) ?? TimerState()
+        configuration = savedConfiguration.normalized
+        state = savedState.repaired
+        if configuration != savedConfiguration {
+            persistConfiguration()
+        }
+        if state != savedState {
+            persistState()
+            if state.phase != savedState.phase {
+                notifications.cancelAllPendingCompletions()
+            }
+        }
+        if configuration != savedConfiguration || state != savedState {
+            noticeMessage = Self.repairNotice
+        }
         updateDisplayedTime()
         reconcileWithCurrentTime()
         startTicker()
@@ -65,7 +116,7 @@ final class TimerStore: ObservableObject {
     }
 
     var statusMessage: String {
-        if let errorMessage { return errorMessage }
+        if let noticeMessage { return noticeMessage }
         return switch state.phase {
         case .idle: "Set durations and press Start."
         case .runningA: state.paused ? "Resume to continue Focus." : "Break Timer will wait for confirmation."
@@ -79,7 +130,7 @@ final class TimerStore: ObservableObject {
     }
 
     func startOrConfirmBreak() {
-        errorMessage = nil
+        noticeMessage = nil
         if state.phase == .waitingForAConfirm {
             startBreak()
             return
@@ -89,11 +140,8 @@ final class TimerStore: ObservableObject {
 
     func startFocus() {
         guard state.phase == .idle else { return }
-        guard configuration.durationASeconds >= 1, configuration.durationBSeconds >= 1 else {
-            errorMessage = "Durations must be at least one second."
-            return
-        }
 
+        configuration = configuration.normalized
         persistConfiguration()
         startPhase(.runningA, durationSeconds: configuration.durationASeconds)
     }
@@ -110,7 +158,7 @@ final class TimerStore: ObservableObject {
 
     func pauseOrResume() {
         guard canPause else { return }
-        errorMessage = nil
+        noticeMessage = nil
 
         if state.paused {
             guard let remaining = state.remainingSeconds, remaining > 0 else { return }
@@ -135,7 +183,7 @@ final class TimerStore: ObservableObject {
 
     func cancel() {
         state = TimerState()
-        errorMessage = nil
+        noticeMessage = nil
         notifications.cancelAllPendingCompletions()
         persistState()
         updateDisplayedTime()
@@ -156,7 +204,7 @@ final class TimerStore: ObservableObject {
         let now = clock.now
         let deadline = now.addingTimeInterval(TimeInterval(durationSeconds))
         state = TimerState(phase: phase, endTimestamp: deadline, paused: false, remainingSeconds: nil)
-        errorMessage = nil
+        noticeMessage = nil
         persistState()
         updateDisplayedTime()
         notifications.scheduleCompletion(for: phase, at: deadline, now: now)

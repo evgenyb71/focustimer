@@ -10,7 +10,7 @@ Retain native SwiftUI, iPhone-only portrait presentation, and iOS 26 minimum. No
 
 ## Implemented baseline
 
-- Configurable Focus and Break; defaults are one minute each. UI uses whole-minute steps: Focus 1–240 minutes, Break 1–120 minutes. The store currently validates only a one-second lower bound, so UI and stored-data constraints are not yet aligned.
+- Configurable Focus and Break; defaults are one minute each. UI uses whole-minute steps: Focus 1–240 minutes, Break 1–120 minutes. Since [I07](phases/I07-enforce-invariants.md), the store rounds saved and started durations to whole minutes and clamps them to the same ranges, which the UI reads from shared constants. On launch, saved timer state that breaks the invariants below is repaired, and the status line says so.
 - Flow: `idle → runningA → waitingForAConfirm → runningB → idle`. Pause is a flag on either running phase. Break never starts automatically after Focus.
 - Start, Start Break, pause/resume, and cancel/reset; duration controls are disabled outside idle. Cancel retains saved configuration.
 - Codable configuration and runtime state in UserDefaults; running phases use absolute Date deadlines and paused phases use remaining seconds. Configuration edits persist when Focus starts.
