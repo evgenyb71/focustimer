@@ -1,6 +1,6 @@
 # I07 Align and enforce configuration and state invariants
 
-Status: verified (2026-10-20): 48 test functions (47 passed, 1 expected failure owned by I12), agent-run with counts from the result bundle (iPhone 17 Pro, iOS 26.5); user-reported Cmd+U and simulator check of the correction notice (iPhone 18 Pro Max, iOS 27.0). Not yet committed. Implements roadmap phase I07, "Align and enforce configuration/state invariants". Branch `feat/I07-enforce-invariants`.
+Status: verified (2026-10-20): 48 test functions (47 passed, 1 expected failure owned by I12), agent-run with counts from the result bundle (iPhone 17 Pro, iOS 26.5); user-reported Cmd+U and simulator check of the correction notice (iPhone 18 Pro Max, iOS 27.0). Commit `103463e`, merged to `main` as `627f7d5` and pushed. Implements roadmap phase I07, "Align and enforce configuration/state invariants". Branch `feat/I07-enforce-invariants`.
 
 Context: [roadmap](../roadmap.md), [mission](../mission.md), [tech stack](../tech-stack.md), previous phase [I06](I06-baseline-transition-tests.md).
 
