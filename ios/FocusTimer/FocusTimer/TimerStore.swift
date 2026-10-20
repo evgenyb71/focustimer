@@ -31,11 +31,15 @@ final class TimerStore: ObservableObject {
 
     private let configurationKey = "config"
     private let stateKey = "state"
+    private let clock: any Clock
+    private let store: any KeyValueStore
     private var ticker: Timer?
 
-    private init(defaults: UserDefaults = .standard) {
-        configuration = Self.decode(Configuration.self, key: configurationKey, from: defaults) ?? Configuration()
-        state = Self.decode(TimerState.self, key: stateKey, from: defaults) ?? TimerState()
+    init(clock: any Clock = SystemClock(), store: any KeyValueStore = UserDefaults.standard) {
+        self.clock = clock
+        self.store = store
+        configuration = Self.decode(Configuration.self, key: configurationKey, from: store) ?? Configuration()
+        state = Self.decode(TimerState.self, key: stateKey, from: store) ?? TimerState()
         updateDisplayedTime()
         reconcileWithCurrentTime()
         startTicker()
@@ -104,7 +108,7 @@ final class TimerStore: ObservableObject {
 
         if state.paused {
             guard let remaining = state.remainingSeconds, remaining > 0 else { return }
-            let deadline = Date().addingTimeInterval(TimeInterval(remaining))
+            let deadline = clock.now.addingTimeInterval(TimeInterval(remaining))
             state.endTimestamp = deadline
             state.remainingSeconds = nil
             state.paused = false
@@ -112,7 +116,7 @@ final class TimerStore: ObservableObject {
             NotificationScheduler.scheduleCompletion(for: state.phase, at: deadline)
         } else {
             guard let deadline = state.endTimestamp else { return }
-            let remaining = max(1, Int(ceil(deadline.timeIntervalSinceNow)))
+            let remaining = max(1, Int(ceil(deadline.timeIntervalSince(clock.now))))
             state.endTimestamp = nil
             state.remainingSeconds = remaining
             state.paused = true
@@ -134,7 +138,7 @@ final class TimerStore: ObservableObject {
         guard !state.paused,
               state.phase == .runningA || state.phase == .runningB,
               let deadline = state.endTimestamp,
-              deadline <= Date() else {
+              deadline <= clock.now else {
             updateDisplayedTime()
             return
         }
@@ -142,7 +146,7 @@ final class TimerStore: ObservableObject {
     }
 
     private func startPhase(_ phase: Phase, durationSeconds: Int) {
-        let deadline = Date().addingTimeInterval(TimeInterval(durationSeconds))
+        let deadline = clock.now.addingTimeInterval(TimeInterval(durationSeconds))
         state = TimerState(phase: phase, endTimestamp: deadline, paused: false, remainingSeconds: nil)
         errorMessage = nil
         persistState()
@@ -181,7 +185,7 @@ final class TimerStore: ObservableObject {
         if state.paused, let remaining = state.remainingSeconds {
             displayedSeconds = max(0, remaining)
         } else if let deadline = state.endTimestamp {
-            displayedSeconds = max(0, Int(ceil(deadline.timeIntervalSinceNow)))
+            displayedSeconds = max(0, Int(ceil(deadline.timeIntervalSince(clock.now))))
         } else if state.phase == .waitingForAConfirm {
             displayedSeconds = 0
         } else {
@@ -189,20 +193,20 @@ final class TimerStore: ObservableObject {
         }
     }
 
-    private func persistConfiguration(defaults: UserDefaults = .standard) {
+    private func persistConfiguration() {
         if let data = try? JSONEncoder().encode(configuration) {
-            defaults.set(data, forKey: configurationKey)
+            store.setData(data, forKey: configurationKey)
         }
     }
 
-    private func persistState(defaults: UserDefaults = .standard) {
+    private func persistState() {
         if let data = try? JSONEncoder().encode(state) {
-            defaults.set(data, forKey: stateKey)
+            store.setData(data, forKey: stateKey)
         }
     }
 
-    private static func decode<T: Decodable>(_ type: T.Type, key: String, from defaults: UserDefaults) -> T? {
-        guard let data = defaults.data(forKey: key) else { return nil }
+    private static func decode<T: Decodable>(_ type: T.Type, key: String, from store: any KeyValueStore) -> T? {
+        guard let data = store.data(forKey: key) else { return nil }
         return try? JSONDecoder().decode(type, from: data)
     }
 }
