@@ -71,7 +71,7 @@ Single authoritative timer state, explicit Break confirmation, local persistence
    - [x] Run `xcodebuild test`; confirm counts from the result bundle; record. Simulator flow check only if production code changed.
    - [x] Record the user's Cmd+U result.
    - [x] Set status to verified only with evidence; move I06 to the roadmap's completed table.
-   - [ ] The user runs `/update-changelog` before merging; fill in the pushed commit in the roadmap after the push.
+   - [x] The user runs `/update-changelog` before merging; fill in the pushed commit in the roadmap after the push.
 
 ## Validation
 
@@ -132,3 +132,15 @@ Run the tests in Xcode with Cmd+U on any iOS 26+ simulator; report pass or fail 
 - [Roadmap](../roadmap.md): I06 moved to the completed table; pushed commit pending.
 - Known issue carried forward: pause at or after expiry stores 1 s remaining instead of completing (owned by I12; marked with `withKnownIssue`, which fails once fixed so the marker gets removed).
 - Remaining limitations: no app code changed in this phase; OS notification delivery, the real OK action, denied permission, suspension, and physical device remain the deferred I02 rows; duration bounds and invalid stored state are untested until I07.
+
+## Handoff for the next session (2026-10-20)
+
+For any agent (Claude Code, Codex) picking up the iOS work. State: I01 to I06 verified and merged; `main` was at `75c92c1` before this handoff note.
+
+- **Next phase: I07** (align and enforce configuration and state invariants). Start it with `$start-phase` / `/start-phase`; no I07 spec exists yet.
+- **Decided with the user:** I06 and I07 stay separate phases, because I06 only recorded current behavior while I07 changes it. Pairing I07 with I09 (corrupt or partial records) may make sense, since both concern invalid saved state; decide that during I07's start-phase interview.
+- **Open I07 decisions to ask about:** for out-of-range stored durations (the store accepts any value of at least 1 s; the UI allows Focus 1 to 240 min and Break 1 to 120 min in whole minutes), whether to clamp, reject, or reset to defaults, and whether seconds that are not whole minutes stay valid; for impossible states (running without a deadline, paused without positive remaining time, deadlines or remaining time on idle or waiting), whether to repair or fall back to idle, and where that ends and I09's recovery begins.
+- **Known issue to keep:** `pauseAtExpiryCompletesInsteadOfAddingTime` is wrapped in `withKnownIssue` for I12; do not remove the marker unless fixing that behavior.
+- **Test conventions:** tests live in `ios/FocusTimer/FocusTimerTests/FocusTimerTests.swift` with doubles in `TestDoubles.swift`; each test uses one `TimerStore` per shared in-memory store unless it deliberately tests relaunch (a second instance loads the first one's saved state). Confirm the executed count from the result bundle, as `AGENTS.md` requires; the current baseline is 36 test functions, 35 passed and 1 expected failure.
+- **Environment:** `xcode-select` points at full Xcode 27.0. Agents have run simulator checks and tests on iPhone 17 Pro (iOS 26.5); the user works on an iPhone 18 Pro Max (iOS 27) simulator, so leave that one alone. Agent build output and result bundles are in `/tmp/FocusTimerDerivedData` and `/tmp/FocusTimerTests-*.xcresult` (untracked, safe to reuse).
+- **Still deferred from I02:** suspension and OS notification rows (R3/R5 logic now covered by tests; S1 to S3 and N1 to N8 not run).

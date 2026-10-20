@@ -23,3 +23,7 @@ The user builds and verifies the app in the Xcode GUI; you cannot. Record their 
 ## Start-phase skill
 
 `$start-phase` in AGENTS.md maps to the project skill [.claude/skills/start-phase/SKILL.md](.claude/skills/start-phase/SKILL.md), invoked as `/start-phase [phase ID]`. It is manual-only (`disable-model-invocation`): it asks the user via `AskUserQuestion` before writing anything, then creates the branch and phase spec. Codex has its own copy at `~/.codex/skills/start-phase`; keep the two procedures in sync when changing either.
+
+## End-session skill
+
+`$end-session` in AGENTS.md maps to the project skill [.claude/skills/end-session/SKILL.md](.claude/skills/end-session/SKILL.md), invoked as `/end-session [notes]`. It is manual-only (`disable-model-invocation`): run it only when the user asks to end or hand off a session. It cleans up agent-started simulators, updates the latest phase spec and roadmap, and writes the handoff section, then asks before any commit, merge, push, or deletion. Codex has its own copy at `~/.codex/skills/end-session`; keep the two procedures in sync when changing either.

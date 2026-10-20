@@ -24,6 +24,7 @@ Keep Markdown clear and use relative links between repository documents. Preserv
 Several models and tools (for example Claude Code and Codex) work on this repository. Keep the state of work in the repository, not in chat:
 
 - The phase spec `specs/ios/phases/Ixx-short-name.md` is the handoff record. Before ending a session, keep its status (planned, in progress, verified), decisions, commands run, results, and open limitations current, so another agent can continue from the file alone.
+- When the user asks to end the session, manually invoke `$end-session`: it shuts down simulators the agent booted, brings the latest phase spec and roadmap up to date, and writes a `Handoff for the next session` section at the end of that spec. Do not invoke it automatically; it commits, pushes, merges, or deletes nothing without asking.
 - Before starting, check `git status` and the latest phase spec for unfinished work by another agent. Do not overwrite or revert changes you did not make; ask the user if they conflict with the task.
 
 ## Repository layout and stack

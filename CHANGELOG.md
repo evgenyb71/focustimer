@@ -11,6 +11,8 @@
 - Record phase I05 as verified (agent-run tests on an iPhone 17 Pro simulator, iOS 26.5, user-reported Cmd+U, and an agent simulator flow check) and move it to the roadmap's completed table; record the I03-I04 merge commit in the roadmap.
 - Add deterministic `TimerStore` tests for Focus and Break, explicit Break confirmation, pause and resume, cancel from every active state, delayed reconciliation, relaunch from the saved store, the notification OK path, and the displayed countdown; pausing at or after expiry, which adds a second instead of completing, is recorded as a known issue for I12.
 - Record phase I06 as verified (36 tests on an iPhone 17 Pro simulator, iOS 26.5, with counts from the result bundle, plus user-reported Cmd+U; no app code changed) and move it to the roadmap's completed table.
+- Add a manual-only `end-session` project skill that shuts down agent-started simulators, brings the latest phase spec and roadmap up to date, and writes a handoff section so a new Claude Code or Codex session can continue from the repository; reference it from `AGENTS.md` and `CLAUDE.md`.
+- Add the first session handoff to the I06 phase spec (next phase I07 and its open decisions, known issues, test baseline, environment) and record the I06 merge commit in the roadmap.
 
 ## 2026-10-19
 
