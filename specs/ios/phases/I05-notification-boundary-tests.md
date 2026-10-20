@@ -1,6 +1,6 @@
 # I05 Notification boundary and first unit-test target
 
-Status: in progress (2026-10-20); plan group 1 (notification boundary) implemented and built, not committed. Implements roadmap phase I05 in the [iOS roadmap](../roadmap.md).
+Status: in progress (2026-10-20); boundary committed in `2b3ce71`; test target added and 6 tests pass (agent-run), not committed; documentation, simulator flow check, and user Cmd+U pending. Implements roadmap phase I05 in the [iOS roadmap](../roadmap.md).
 
 Context: [mission](../mission.md), [tech stack](../tech-stack.md), previous phase [I03-I04](I03-I04-inject-clock-and-store.md).
 
@@ -60,12 +60,12 @@ Single authoritative timer state (`TimerStore.shared` stays the only production 
    - [x] Inject it into `TimerStore` with a production default; route the four calls through it.
    - [x] Build; confirm with `grep` that `TimerStore.swift` no longer references `NotificationScheduler.` directly and that the scheduler no longer uses `timeIntervalSinceNow`.
 2. Test target (user, then agent)
-   - [ ] User adds `FocusTimerTests` in Xcode as described in Decisions and reports done.
-   - [ ] Agent inspects the generated target, scheme, and settings (deployment target 26.0, host app, test action) without editing project files.
+   - [x] User adds `FocusTimerTests` in Xcode as described in Decisions and reports done.
+   - [x] Agent inspects the generated target, scheme, and settings (deployment target 26.0, host app, test action) without editing project files.
 3. First tests (agent, one commit with the target)
-   - [ ] Add test doubles: fake clock, in-memory store, recording notification scheduler.
-   - [ ] Add focused tests, for example: Start Focus schedules one Focus completion at now + Focus duration; Pause cancels the Focus completion; Resume schedules again at now + remaining; Cancel cancels all; Start Break after Focus expiry schedules one Break completion.
-   - [ ] Run `xcodebuild test`; record the command, destination, and result.
+   - [x] Add test doubles: fake clock, in-memory store, recording notification scheduler.
+   - [x] Add focused tests, for example: Start Focus schedules one Focus completion at now + Focus duration; Pause cancels the Focus completion; Resume schedules again at now + remaining; Cancel cancels all; Start Break after Focus expiry schedules one Break completion.
+   - [x] Run `xcodebuild test`; record the command, destination, and result.
 4. Documentation and close-out (agent)
    - [ ] Add the test command and destination to `AGENTS.md` and the tech stack; update the framework wording.
    - [ ] Replace "pending push" in the roadmap's I03-I04 row with `cb2b3aa` on `main`.
@@ -113,3 +113,22 @@ Run the FocusTimer scheme's tests in Xcode (Product > Test, Cmd+U) on any iOS 26
 - Build: Xcode 27.0, the Validation build command with `DEVELOPER_DIR`; `** BUILD SUCCEEDED **`. No compiler warnings; the same unrelated `appintentsmetadataprocessor` tool warning as earlier phases.
 - Static checks: `TimerStore.swift` has no `NotificationScheduler.` references; no `timeIntervalSinceNow` remains in any app source file; no static schedule or cancel callers remain.
 - Not yet run: tests (target not added), simulator flow check.
+
+### Plan group 2: test target setup (user, with agent checks, 2026-10-20)
+
+- The user added `FocusTimerTests` in Xcode 27.0 (Unit Testing Bundle, Swift Testing template, hosted by FocusTimer). Xcode added it to the shared scheme's test action (autocreated test plan, `skipped = "NO"`, `parallelizable = "YES"`) and staged the template file in git.
+- Template defaults that differed from the app target, checked in `project.pbxproj`: deployment target 27.0, Swift 5.0, device family iPhone and iPad, bundle ID `com.boch.FocusTimerTests`. The user set Swift 6.0 and iPhone only in Xcode; Xcode then wrote deployment target 26.6 although its UI showed "26", so the agent changed only those two lines to `26.0`, with the user's approval. The bundle ID stays `com.boch.FocusTimerTests` by the user's decision.
+- Pitfall: Xcode created the `FocusTimerTests` synchronized group without attaching it to the test target (no `fileSystemSynchronizedGroups` on the target), so the target compiled no sources. Two `xcodebuild test` runs printed `** TEST SUCCEEDED **` while running 0 tests (`totalTestCount: 0` in the result bundle; test binary `__text` size 0). A first membership change in Xcode turned the folder into a plain folder reference in the Resources phase; the user's second attempt produced the correct wiring: synchronized group `57005280308776F4007BB761` listed in the test target's `fileSystemSynchronizedGroups`, empty Resources phase. Lesson: confirm the test count from the result bundle, never from the success banner alone.
+- One run with `-parallel-testing-enabled NO` failed to launch the app ("Application failed preflight checks"); it was not needed once the target was wired, and the documented command uses the scheme's defaults.
+
+### Plan group 3: first tests (agent-run, 2026-10-20)
+
+- Files: `ios/FocusTimer/FocusTimerTests/TestDoubles.swift` (`FakeClock`, `InMemoryStore`, `RecordingNotificationScheduler`, all `@MainActor` because the app module's protocols are main-actor isolated by default) and `FocusTimerTests.swift` (template placeholder replaced by the `@MainActor` suite `TimerStoreNotificationTests`).
+- Command:
+
+  ```sh
+  DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project ios/FocusTimer/FocusTimer.xcodeproj -scheme FocusTimer -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5' -derivedDataPath /tmp/FocusTimerDerivedData -resultBundlePath <path>.xcresult CODE_SIGNING_ALLOWED=NO test
+  ```
+
+- Result: `** TEST SUCCEEDED **`; `xcrun xcresulttool get test-results summary` reports `result: Passed`, `totalTestCount: 6`, `passedTests: 6`, `failedTests: 0`, `skippedTests: 0`, device iPhone 17 Pro, iOS 26.5. Test binary `__text` size 78120 bytes. No compiler warnings; only the unrelated `appintentsmetadataprocessor` tool warning.
+- Passed tests in `TimerStoreNotificationTests`: `startFocusSchedulesFocusCompletion`, `pauseCancelsFocusCompletion`, `resumeSchedulesFromRemainingTime`, `cancelCancelsAllCompletions`, `breakIsScheduledOnlyAfterConfirmation`, `persistsThroughInjectedStore`. Together they show the recording double observing schedule (with deterministic deadlines from the fake clock), cancel-for-phase, and cancel-all calls, Break scheduled only after confirmation, and writes going to the injected in-memory store.
