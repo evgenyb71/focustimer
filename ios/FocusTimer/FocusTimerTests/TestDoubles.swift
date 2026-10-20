@@ -17,6 +17,7 @@ final class FakeClock: Clock {
 @MainActor
 final class InMemoryStore: KeyValueStore {
     private(set) var values: [String: Data] = [:]
+    private(set) var writtenKeys: [String] = []
 
     func data(forKey key: String) -> Data? {
         values[key]
@@ -24,6 +25,7 @@ final class InMemoryStore: KeyValueStore {
 
     func setData(_ data: Data, forKey key: String) {
         values[key] = data
+        writtenKeys.append(key)
     }
 }
 
