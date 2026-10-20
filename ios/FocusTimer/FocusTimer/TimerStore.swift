@@ -59,6 +59,15 @@ final class TimerStore: ObservableObject {
 
     static let repairNotice = "Saved timer data was corrected."
 
+    /// Version of the saved `config` and `state` format. Records saved before versioning are version 0.
+    nonisolated static let currentSchemaVersion = 1
+
+    /// Steps that update saved records by one version, in order: the step at index n migrates version n to n + 1.
+    private static let migrations: [(any KeyValueStore) -> Void] = [
+        // 0 → 1: unversioned records already have the version 1 format; only the version is added.
+        { _ in },
+    ]
+
     static let shared = TimerStore()
 
     @Published var configuration: Configuration
@@ -68,6 +77,7 @@ final class TimerStore: ObservableObject {
 
     private let configurationKey = "config"
     private let stateKey = "state"
+    private let schemaVersionKey = "schemaVersion"
     private let clock: any Clock
     private let store: any KeyValueStore
     private let notifications: any NotificationScheduling
@@ -81,21 +91,27 @@ final class TimerStore: ObservableObject {
         self.clock = clock
         self.store = store
         self.notifications = notifications
-        let savedConfiguration = Self.decode(Configuration.self, key: configurationKey, from: store) ?? Configuration()
-        let savedState = Self.decode(TimerState.self, key: stateKey, from: store) ?? TimerState()
-        configuration = savedConfiguration.normalized
-        state = savedState.repaired
-        if configuration != savedConfiguration {
-            persistConfiguration()
-        }
-        if state != savedState {
-            persistState()
-            if state.phase != savedState.phase {
-                notifications.cancelAllPendingCompletions()
+        if Self.migrateSavedRecords(in: store, versionKey: schemaVersionKey) {
+            let savedConfiguration = Self.decode(Configuration.self, key: configurationKey, from: store) ?? Configuration()
+            let savedState = Self.decode(TimerState.self, key: stateKey, from: store) ?? TimerState()
+            configuration = savedConfiguration.normalized
+            state = savedState.repaired
+            if configuration != savedConfiguration {
+                persistConfiguration()
             }
-        }
-        if configuration != savedConfiguration || state != savedState {
-            noticeMessage = Self.repairNotice
+            if state != savedState {
+                persistState()
+                if state.phase != savedState.phase {
+                    notifications.cancelAllPendingCompletions()
+                }
+            }
+            if configuration != savedConfiguration || state != savedState {
+                noticeMessage = Self.repairNotice
+            }
+        } else {
+            // Records from a newer or unreadable version are left untouched; recovering them belongs to I09.
+            configuration = Configuration()
+            state = TimerState()
         }
         updateDisplayedTime()
         reconcileWithCurrentTime()
@@ -259,6 +275,28 @@ final class TimerStore: ObservableObject {
         if let data = try? JSONEncoder().encode(state) {
             store.setData(data, forKey: stateKey)
         }
+    }
+
+    /// Brings saved records up to the current schema version and saves the new version.
+    /// Returns false, writing nothing, when the saved version is newer or unreadable.
+    private static func migrateSavedRecords(in store: any KeyValueStore, versionKey: String) -> Bool {
+        let savedVersion: Int?
+        if let data = store.data(forKey: versionKey) {
+            savedVersion = try? JSONDecoder().decode(Int.self, from: data)
+        } else {
+            savedVersion = 0
+        }
+        guard let savedVersion, (0...currentSchemaVersion).contains(savedVersion) else { return false }
+        guard savedVersion < currentSchemaVersion else { return true }
+
+        assert(migrations.count == currentSchemaVersion)
+        for migrate in migrations[savedVersion...] {
+            migrate(store)
+        }
+        if let data = try? JSONEncoder().encode(currentSchemaVersion) {
+            store.setData(data, forKey: versionKey)
+        }
+        return true
     }
 
     private static func decode<T: Decodable>(_ type: T.Type, key: String, from store: any KeyValueStore) -> T? {
