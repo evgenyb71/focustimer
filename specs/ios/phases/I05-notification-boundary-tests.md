@@ -71,7 +71,7 @@ Single authoritative timer state (`TimerStore.shared` stays the only production 
    - [x] Replace "pending push" in the roadmap's I03-I04 row with `cb2b3aa` on `main`.
    - [x] Agent simulator flow check; record user Cmd+U result.
    - [x] Set status to verified only with evidence; move I05 to the roadmap's completed table.
-   - [ ] The user runs `/update-changelog` before merging; fill in the pushed commit in the roadmap after the push.
+   - [x] The user runs `/update-changelog` before merging; fill in the pushed commit in the roadmap after the push.
 
 ## Validation
 

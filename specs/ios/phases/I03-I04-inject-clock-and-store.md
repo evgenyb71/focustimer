@@ -65,7 +65,7 @@ Single authoritative timer state (`TimerStore.shared` stays the only production 
    - [x] Agent-driven simulator run of the flow checks below, using a device other than the user's booted one.
    - [x] Record results; update the [tech stack](../tech-stack.md) gap note (store fixed; clock injected; notification scheduler still live) and its State row (internal initializer, injected clock and store).
    - [x] Set status to verified only with evidence; merge the I03 and I04 rows into the completed table in the roadmap.
-   - [ ] The user runs `/update-changelog` before merging; fill in the pushed commit in the roadmap after the push.
+   - [x] The user runs `/update-changelog` before merging; fill in the pushed commit in the roadmap after the push.
 
 ## Validation
 

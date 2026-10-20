@@ -9,6 +9,8 @@
 - Add the `FocusTimerTests` unit-test target (Swift Testing, hosted by the app, iOS 26.0, Swift 6) with a fake clock, in-memory store, and recording notification scheduler, and six tests covering schedule and cancel calls, Break scheduled only after confirmation, and writes to the injected store.
 - Document the `xcodebuild test` command in `AGENTS.md` and the iOS tech stack, with the rule to confirm the executed test count from the result bundle; unit tests use Swift Testing and XCTest is reserved for UI tests.
 - Record phase I05 as verified (agent-run tests on an iPhone 17 Pro simulator, iOS 26.5, user-reported Cmd+U, and an agent simulator flow check) and move it to the roadmap's completed table; record the I03-I04 merge commit in the roadmap.
+- Add deterministic `TimerStore` tests for Focus and Break, explicit Break confirmation, pause and resume, cancel from every active state, delayed reconciliation, relaunch from the saved store, the notification OK path, and the displayed countdown; pausing at or after expiry, which adds a second instead of completing, is recorded as a known issue for I12.
+- Record phase I06 as verified (36 tests on an iPhone 17 Pro simulator, iOS 26.5, with counts from the result bundle, plus user-reported Cmd+U; no app code changed) and move it to the roadmap's completed table.
 
 ## 2026-10-19
 
