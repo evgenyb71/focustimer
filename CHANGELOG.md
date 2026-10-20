@@ -5,6 +5,10 @@
 - Inject a `Clock` into `TimerStore` so every current-time read goes through one source; production uses `SystemClock`, and the initializer is now internal for future tests.
 - Inject one `KeyValueStore` into `TimerStore` and use it for every read and write, fixing saves that ignored the supplied store and always wrote to `UserDefaults.standard`; keys and encoding are unchanged.
 - Record combined phase I03-I04 as verified with agent-run build, static checks, and iPhone 17 Pro simulator checks (iOS 26.5), including saved state surviving the update; update the iOS tech stack and merge the I03 and I04 roadmap rows into the completed table.
+- Inject a `NotificationScheduling` boundary into `TimerStore`; the production scheduler keeps the same notification content and identifiers but now computes its trigger interval from the injected clock instead of the live clock.
+- Add the `FocusTimerTests` unit-test target (Swift Testing, hosted by the app, iOS 26.0, Swift 6) with a fake clock, in-memory store, and recording notification scheduler, and six tests covering schedule and cancel calls, Break scheduled only after confirmation, and writes to the injected store.
+- Document the `xcodebuild test` command in `AGENTS.md` and the iOS tech stack, with the rule to confirm the executed test count from the result bundle; unit tests use Swift Testing and XCTest is reserved for UI tests.
+- Record phase I05 as verified (agent-run tests on an iPhone 17 Pro simulator, iOS 26.5, user-reported Cmd+U, and an agent simulator flow check) and move it to the roadmap's completed table; record the I03-I04 merge commit in the roadmap.
 
 ## 2026-10-19
 
