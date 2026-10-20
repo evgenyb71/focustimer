@@ -33,11 +33,17 @@ final class TimerStore: ObservableObject {
     private let stateKey = "state"
     private let clock: any Clock
     private let store: any KeyValueStore
+    private let notifications: any NotificationScheduling
     private var ticker: Timer?
 
-    init(clock: any Clock = SystemClock(), store: any KeyValueStore = UserDefaults.standard) {
+    init(
+        clock: any Clock = SystemClock(),
+        store: any KeyValueStore = UserDefaults.standard,
+        notifications: any NotificationScheduling = SystemNotificationScheduler()
+    ) {
         self.clock = clock
         self.store = store
+        self.notifications = notifications
         configuration = Self.decode(Configuration.self, key: configurationKey, from: store) ?? Configuration()
         state = Self.decode(TimerState.self, key: stateKey, from: store) ?? TimerState()
         updateDisplayedTime()
@@ -108,19 +114,20 @@ final class TimerStore: ObservableObject {
 
         if state.paused {
             guard let remaining = state.remainingSeconds, remaining > 0 else { return }
-            let deadline = clock.now.addingTimeInterval(TimeInterval(remaining))
+            let now = clock.now
+            let deadline = now.addingTimeInterval(TimeInterval(remaining))
             state.endTimestamp = deadline
             state.remainingSeconds = nil
             state.paused = false
             persistState()
-            NotificationScheduler.scheduleCompletion(for: state.phase, at: deadline)
+            notifications.scheduleCompletion(for: state.phase, at: deadline, now: now)
         } else {
             guard let deadline = state.endTimestamp else { return }
             let remaining = max(1, Int(ceil(deadline.timeIntervalSince(clock.now))))
             state.endTimestamp = nil
             state.remainingSeconds = remaining
             state.paused = true
-            NotificationScheduler.cancelPendingCompletion(for: state.phase)
+            notifications.cancelPendingCompletion(for: state.phase)
             persistState()
         }
         updateDisplayedTime()
@@ -129,7 +136,7 @@ final class TimerStore: ObservableObject {
     func cancel() {
         state = TimerState()
         errorMessage = nil
-        NotificationScheduler.cancelAllPendingCompletions()
+        notifications.cancelAllPendingCompletions()
         persistState()
         updateDisplayedTime()
     }
@@ -146,12 +153,13 @@ final class TimerStore: ObservableObject {
     }
 
     private func startPhase(_ phase: Phase, durationSeconds: Int) {
-        let deadline = clock.now.addingTimeInterval(TimeInterval(durationSeconds))
+        let now = clock.now
+        let deadline = now.addingTimeInterval(TimeInterval(durationSeconds))
         state = TimerState(phase: phase, endTimestamp: deadline, paused: false, remainingSeconds: nil)
         errorMessage = nil
         persistState()
         updateDisplayedTime()
-        NotificationScheduler.scheduleCompletion(for: phase, at: deadline)
+        notifications.scheduleCompletion(for: phase, at: deadline, now: now)
     }
 
     private func handlePhaseCompletion() {

@@ -24,27 +24,35 @@ enum NotificationScheduler {
     static func requestAuthorization() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
+}
 
-    static func scheduleCompletion(for phase: TimerStore.Phase, at deadline: Date) {
+protocol NotificationScheduling {
+    func scheduleCompletion(for phase: TimerStore.Phase, at deadline: Date, now: Date)
+    func cancelPendingCompletion(for phase: TimerStore.Phase)
+    func cancelAllPendingCompletions()
+}
+
+struct SystemNotificationScheduler: NotificationScheduling {
+    func scheduleCompletion(for phase: TimerStore.Phase, at deadline: Date, now: Date) {
         let identifier: String
         let content = UNMutableNotificationContent()
         content.sound = .default
 
         switch phase {
         case .runningA:
-            identifier = focusIdentifier
+            identifier = NotificationScheduler.focusIdentifier
             content.title = "Focus Timer complete"
             content.body = "Tap OK to start Break Timer."
-            content.categoryIdentifier = focusCategory
+            content.categoryIdentifier = NotificationScheduler.focusCategory
         case .runningB:
-            identifier = breakIdentifier
+            identifier = NotificationScheduler.breakIdentifier
             content.title = "Break Timer complete"
             content.body = "Sequence finished."
         case .idle, .waitingForAConfirm:
             return
         }
 
-        let interval = max(1, deadline.timeIntervalSinceNow)
+        let interval = max(1, deadline.timeIntervalSince(now))
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
         let center = UNUserNotificationCenter.current()
@@ -52,20 +60,24 @@ enum NotificationScheduler {
         center.add(request)
     }
 
-    static func cancelPendingCompletion(for phase: TimerStore.Phase) {
+    func cancelPendingCompletion(for phase: TimerStore.Phase) {
         switch phase {
         case .runningA:
-            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [focusIdentifier])
+            UNUserNotificationCenter.current().removePendingNotificationRequests(
+                withIdentifiers: [NotificationScheduler.focusIdentifier]
+            )
         case .runningB:
-            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [breakIdentifier])
+            UNUserNotificationCenter.current().removePendingNotificationRequests(
+                withIdentifiers: [NotificationScheduler.breakIdentifier]
+            )
         case .idle, .waitingForAConfirm:
             break
         }
     }
 
-    static func cancelAllPendingCompletions() {
+    func cancelAllPendingCompletions() {
         UNUserNotificationCenter.current().removePendingNotificationRequests(
-            withIdentifiers: [focusIdentifier, breakIdentifier]
+            withIdentifiers: [NotificationScheduler.focusIdentifier, NotificationScheduler.breakIdentifier]
         )
     }
 }
