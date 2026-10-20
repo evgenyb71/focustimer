@@ -1,6 +1,6 @@
 # I03-I04 Inject the clock and persistence store into TimerStore
 
-Status: in progress (2026-10-20); plan group 1 (clock) implemented and built, not committed. Implements roadmap phases I03 and I04 in the [iOS roadmap](../roadmap.md), combined by user decision.
+Status: in progress (2026-10-20); plan group 1 (clock) committed in `092d4d5`; plan group 2 (store) implemented and built, not committed; simulator checks not run. Implements roadmap phases I03 and I04 in the [iOS roadmap](../roadmap.md), combined by user decision.
 
 Context: [mission](../mission.md), [tech stack](../tech-stack.md), previous phase [I02](I02-exercise-lifecycle-notifications.md).
 
@@ -58,9 +58,9 @@ Single authoritative timer state (`TimerStore.shared` stays the only production 
    - [x] Replace every `Date()` and `timeIntervalSinceNow` in `TimerStore` with reads of `clock.now`.
    - [x] Build; confirm with `grep` that `TimerStore.swift` has no direct `Date()` or `timeIntervalSinceNow`.
 2. Store injection (commit 2, I04)
-   - [ ] Add `KeyValueStore` and the `UserDefaults` conformance.
-   - [ ] Store the injected store once in `TimerStore`; route `decode`, `persistConfiguration`, and `persistState` through it; remove the `.standard` default parameters from the persist methods.
-   - [ ] Build; confirm with `grep` that `.standard` appears only as the initializer's default argument.
+   - [x] Add `KeyValueStore` and the `UserDefaults` conformance.
+   - [x] Store the injected store once in `TimerStore`; route `decode`, `persistConfiguration`, and `persistState` through it; remove the `.standard` default parameters from the persist methods.
+   - [x] Build; confirm with `grep` that `.standard` appears only as the initializer's default argument.
 3. Verification and close-out
    - [ ] Agent-driven simulator run of the flow checks below, using a device other than the user's booted one.
    - [ ] Record results; update the [tech stack](../tech-stack.md) gap note (store fixed; clock injected; notification scheduler still live) and its State row (internal initializer, injected clock and store).
@@ -111,3 +111,10 @@ The user may repeat any of the steps above on their own simulator in Xcode; resu
 - Build: Xcode 27.0, the Validation build command with `DEVELOPER_DIR`; `** BUILD SUCCEEDED **`. No compiler warnings; one tool warning from `appintentsmetadataprocessor` ("no AppIntents.framework dependency found"), unrelated to this change.
 - Static check: `grep -n "Date()\|timeIntervalSinceNow" TimerStore.swift` returns nothing.
 - Not yet run: simulator flow checks (after plan group 2).
+
+### Plan group 2: store injection (agent-run, 2026-10-20)
+
+- Change: new `ios/FocusTimer/FocusTimer/KeyValueStore.swift` with `KeyValueStore` (`data(forKey:)`, `setData(_:forKey:)`) and a `UserDefaults` conformance whose `setData` forwards to `set(_:forKey:)`. `TimerStore` holds `private let store: any KeyValueStore`; the initializer is `init(clock: any Clock = SystemClock(), store: any KeyValueStore = UserDefaults.standard)`. `decode`, `persistConfiguration`, and `persistState` use the stored store; the persist methods no longer take a `defaults` parameter. Keys `config` and `state` and the JSON encoding are unchanged.
+- Build: Xcode 27.0, the Validation build command with `DEVELOPER_DIR`; `** BUILD SUCCEEDED **`. No compiler warnings; the same unrelated `appintentsmetadataprocessor` tool warning as group 1.
+- Static checks: in `TimerStore.swift`, `.standard` appears only in the initializer's default argument (line 38); reads and writes are `store.data(forKey:)` and `store.setData(_:forKey:)` (lines 198, 204, 209); still no `Date()` or `timeIntervalSinceNow`.
+- Not yet run: simulator flow checks, including saved state surviving the update (Validation step 1).

@@ -32,12 +32,14 @@ final class TimerStore: ObservableObject {
     private let configurationKey = "config"
     private let stateKey = "state"
     private let clock: any Clock
+    private let store: any KeyValueStore
     private var ticker: Timer?
 
-    init(clock: any Clock = SystemClock(), defaults: UserDefaults = .standard) {
+    init(clock: any Clock = SystemClock(), store: any KeyValueStore = UserDefaults.standard) {
         self.clock = clock
-        configuration = Self.decode(Configuration.self, key: configurationKey, from: defaults) ?? Configuration()
-        state = Self.decode(TimerState.self, key: stateKey, from: defaults) ?? TimerState()
+        self.store = store
+        configuration = Self.decode(Configuration.self, key: configurationKey, from: store) ?? Configuration()
+        state = Self.decode(TimerState.self, key: stateKey, from: store) ?? TimerState()
         updateDisplayedTime()
         reconcileWithCurrentTime()
         startTicker()
@@ -191,20 +193,20 @@ final class TimerStore: ObservableObject {
         }
     }
 
-    private func persistConfiguration(defaults: UserDefaults = .standard) {
+    private func persistConfiguration() {
         if let data = try? JSONEncoder().encode(configuration) {
-            defaults.set(data, forKey: configurationKey)
+            store.setData(data, forKey: configurationKey)
         }
     }
 
-    private func persistState(defaults: UserDefaults = .standard) {
+    private func persistState() {
         if let data = try? JSONEncoder().encode(state) {
-            defaults.set(data, forKey: stateKey)
+            store.setData(data, forKey: stateKey)
         }
     }
 
-    private static func decode<T: Decodable>(_ type: T.Type, key: String, from defaults: UserDefaults) -> T? {
-        guard let data = defaults.data(forKey: key) else { return nil }
+    private static func decode<T: Decodable>(_ type: T.Type, key: String, from store: any KeyValueStore) -> T? {
+        guard let data = store.data(forKey: key) else { return nil }
         return try? JSONDecoder().decode(type, from: data)
     }
 }
