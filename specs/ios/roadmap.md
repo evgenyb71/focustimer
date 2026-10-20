@@ -25,6 +25,7 @@ Move a phase here when its phase spec is marked verified and the work is pushed.
 | I03-I04 | Injected `Clock` and one `KeyValueStore` into `TimerStore` (internal initializer; production uses `SystemClock` and `UserDefaults.standard`); saved state survives the update; flow unchanged (agent-run, iPhone 17 Pro simulator, iOS 26.5). Test control shown by design only until I05/I06 | 2026-10-20 | [I03-I04-inject-clock-and-store](phases/I03-I04-inject-clock-and-store.md) | `cb2b3aa` on `main` |
 | I05 | `NotificationScheduling` boundary injected into `TimerStore` (interval from the injected clock); `FocusTimerTests` Swift Testing target with 6 passing tests and a documented `xcodebuild test` command (agent-run iPhone 17 Pro iOS 26.5; user-reported Cmd+U) | 2026-10-20 | [I05-notification-boundary-tests](phases/I05-notification-boundary-tests.md) | `131616d` on `main` |
 | I06 | Deterministic `TimerStore` tests: Focus/Break, explicit confirmation, pause/resume, cancel, delayed reconciliation, relaunch from store, notification OK path, countdown display (36 tests; agent-run iPhone 17 Pro iOS 26.5, user-reported Cmd+U). Known issue: pause at expiry adds time (I12) | 2026-10-20 | [I06-baseline-transition-tests](phases/I06-baseline-transition-tests.md) | `75c92c1` on `main` |
+| I07 | Saved and started durations rounded to whole minutes and clamped to Focus 1–240 min and Break 1–120 min (shared with the UI); invalid saved timer state repaired at launch with a correction notice (48 tests: 47 passed, 1 expected failure for I12; agent-run iPhone 17 Pro iOS 26.5, user-reported Cmd+U and notice check) | 2026-10-20 | [I07-enforce-invariants](phases/I07-enforce-invariants.md) | `627f7d5` on `main` |
 
 ## Small forward phases
 
@@ -32,7 +33,6 @@ Execute one phase at a time, in order. Before code, write a short phase spec at 
 
 | Phase | Small deliverable | Exit check |
 | --- | --- | --- |
-| I07 | Align and enforce configuration/state invariants | Test invalid ranges, missing deadlines, impossible paused states; retain agreed minute rules |
 | I08 | Add schema versioning and migration of current records | Fixtures from existing unversioned keys retain valid settings and timer state |
 | I09 | Recover corrupt/partial/unsupported saved records | Safe idle fallback, preserve valid config; relaunch remains usable |
 | I10 | Persist a cycle identity and validate action provenance | An old Focus notification cannot start Break in a newer cycle; duplicate actions are harmless |
