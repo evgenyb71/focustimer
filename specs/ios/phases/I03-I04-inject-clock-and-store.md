@@ -1,6 +1,6 @@
 # I03-I04 Inject the clock and persistence store into TimerStore
 
-Status: in progress (2026-10-20); plan group 1 (clock) committed in `092d4d5`; plan group 2 (store) implemented and built, not committed; simulator checks not run. Implements roadmap phases I03 and I04 in the [iOS roadmap](../roadmap.md), combined by user decision.
+Status: verified (2026-10-20), agent-run build, static checks, and simulator checks 1 to 7 (iPhone 17 Pro, iOS 26.5); clock in `092d4d5`, store in `aa668d7`. "Tests can control now" and store isolation are shown by design and static checks only, until I05/I06. Implements roadmap phases I03 and I04 in the [iOS roadmap](../roadmap.md), combined by user decision.
 
 Context: [mission](../mission.md), [tech stack](../tech-stack.md), previous phase [I02](I02-exercise-lifecycle-notifications.md).
 
@@ -62,9 +62,10 @@ Single authoritative timer state (`TimerStore.shared` stays the only production 
    - [x] Store the injected store once in `TimerStore`; route `decode`, `persistConfiguration`, and `persistState` through it; remove the `.standard` default parameters from the persist methods.
    - [x] Build; confirm with `grep` that `.standard` appears only as the initializer's default argument.
 3. Verification and close-out
-   - [ ] Agent-driven simulator run of the flow checks below, using a device other than the user's booted one.
-   - [ ] Record results; update the [tech stack](../tech-stack.md) gap note (store fixed; clock injected; notification scheduler still live) and its State row (internal initializer, injected clock and store).
-   - [ ] Set status to verified only with evidence; merge the I03 and I04 rows into the completed table in the roadmap; the user runs `/update-changelog` before merging.
+   - [x] Agent-driven simulator run of the flow checks below, using a device other than the user's booted one.
+   - [x] Record results; update the [tech stack](../tech-stack.md) gap note (store fixed; clock injected; notification scheduler still live) and its State row (internal initializer, injected clock and store).
+   - [x] Set status to verified only with evidence; merge the I03 and I04 rows into the completed table in the roadmap.
+   - [ ] The user runs `/update-changelog` before merging; fill in the pushed commit in the roadmap after the push.
 
 ## Validation
 
@@ -118,3 +119,27 @@ The user may repeat any of the steps above on their own simulator in Xcode; resu
 - Build: Xcode 27.0, the Validation build command with `DEVELOPER_DIR`; `** BUILD SUCCEEDED **`. No compiler warnings; the same unrelated `appintentsmetadataprocessor` tool warning as group 1.
 - Static checks: in `TimerStore.swift`, `.standard` appears only in the initializer's default argument (line 38); reads and writes are `store.data(forKey:)` and `store.setData(_:forKey:)` (lines 198, 204, 209); still no `Date()` or `timeIntervalSinceNow`.
 - Not yet run: simulator flow checks, including saved state surviving the update (Validation step 1).
+
+### Simulator flow checks (agent-run, 2026-10-20)
+
+- Environment: iPhone 17 Pro simulator, iOS 26.5, Xcode 27.0 (`xcode-select` now points at full Xcode); the user's booted iPhone 18 Pro Max was not touched. Build under test: commit `aa668d7`, from `/tmp/FocusTimerDerivedData` (binary dated 12:12, containing `SystemClock` and `KeyValueStore`). Taps and screenshots by the agent with the simulator tool and `xcrun simctl io ... screenshot`; force-quit and relaunch with `xcrun simctl terminate`/`launch`; saved records read from the app container's `Library/Preferences/com.ebochkarev.FocusTimer.plist` with `PlistBuddy`.
+- Method note: the plist file on disk lags `UserDefaults` writes by a few seconds, so a read one second after a tap can show the previous record; the later read is the one recorded.
+
+| # | Check | Observed | Result |
+| --- | --- | --- | --- |
+| 1 | Saved state survives the update | With the pre-change build (binary dated 2026-10-19 15:24) set Focus 2 min, Break 3 min, started, paused: saved `config` `{"durationASeconds":120,"durationBSeconds":180}`, `state` `{"phase":"runningA","paused":true,"remainingSeconds":116}`. Installed the new build over it and relaunched: "Focus paused" 01:56, 2 min / 3 min; records unchanged | Pass |
+| 3 | Pause, wait, Resume | Resume at about 12:17:31 saved `endTimestamp` for 12:19:27 (116 s later) and showed 01:51 at 12:17:36; Pause showed 01:39 unchanged across 6 s and saved `{"phase":"runningA","paused":true,"remainingSeconds":99}` | Pass |
+| 4 | Cancel (C1) | Ready with 2 min / 3 min retained | Pass |
+| 2 | Start, countdown | After setting 1 min / 1 min: 01:00 at 12:18:38, 00:56 at 12:18:41 | Pass |
+| 5 | Relaunch before deadline (R1) | Force-quit 12:18:42, relaunch showed 00:45 running at 12:18:52 | Pass |
+| 6 | Relaunch after deadline (R2) | Force-quit 12:18:53, relaunch at 12:19:45 showed "Focus timer complete", 00:00, Start Break; Break not started | Pass |
+| 7 | Break to expiry | Start Break showed 00:59 at 12:20:03; at 12:21:06 Ready with 1 min / 1 min; saved `config` 60/60 and `state` `{"phase":"idle","paused":false}` | Pass |
+
+- Observation: at Break expiry a foreground banner "Break Timer complete / Sequence finished." appeared, so notification permission is granted on this simulator. This is not a notification check (I02 N rows stay deferred).
+- Incidental: check 1 also exercised relaunch while paused (I02 R3) across a build update; it is not recorded as closing R3.
+
+### Close-out (2026-10-20)
+
+- [Tech stack](../tech-stack.md): State row, source map (`Clock.swift`, `KeyValueStore.swift`), and gap note updated; the notification scheduler's live clock and static calls remain the open boundary for I05.
+- [Roadmap](../roadmap.md): I03 and I04 rows merged into one completed-table row; pushed commit pending.
+- Remaining limitations: no test target yet, so a fake clock or isolated store has not been exercised; `NotificationScheduler` reads the live clock; user did not run an Xcode check of this build (optional per Decisions); deferred I02 rows unchanged.

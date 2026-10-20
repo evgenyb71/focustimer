@@ -22,6 +22,7 @@ Move a phase here when its phase spec is marked verified and the work is pushed.
 | --- | --- | --- | --- | --- |
 | I01 | Recorded build and manual Focus → confirmation → Break flow (user-reported, iPhone 18 Pro Max simulator, iOS 27, Xcode 27.0) | 2026-10-19 | [I01-record-baseline-flow](phases/I01-record-baseline-flow.md) | `ce8fa8b` on `main` |
 | I02 | Pause/resume, cancel, relaunch exercised; matrix recorded, no defects found. Deferred, unverified: R3, R5, S1-S3, N1-N8 (suspension, notifications) | 2026-10-19 | [I02-exercise-lifecycle-notifications](phases/I02-exercise-lifecycle-notifications.md) | `2b25b16` on `main` |
+| I03-I04 | Injected `Clock` and one `KeyValueStore` into `TimerStore` (internal initializer; production uses `SystemClock` and `UserDefaults.standard`); saved state survives the update; flow unchanged (agent-run, iPhone 17 Pro simulator, iOS 26.5). Test control shown by design only until I05/I06 | 2026-10-20 | [I03-I04-inject-clock-and-store](phases/I03-I04-inject-clock-and-store.md) | pending push on `feat/I03-I04-inject-clock-and-store` |
 
 ## Small forward phases
 
@@ -29,8 +30,6 @@ Execute one phase at a time, in order. Before code, write a short phase spec at 
 
 | Phase | Small deliverable | Exit check |
 | --- | --- | --- |
-| I03 | Inject one clock dependency into timer logic | Existing flow preserved; production uses Date; tests can control now |
-| I04 | Inject one consistent persistence store | All reads/writes use the supplied store; isolated defaults do not affect production data |
 | I05 | Introduce a small notification boundary and XCTest unit target | Test double observes schedule/cancel calls; document and run the test command |
 | I06 | Add deterministic baseline transition/deadline tests | Cover Focus/Break, explicit confirmation, pause/resume, cancel, and delayed reconciliation |
 | I07 | Align and enforce configuration/state invariants | Test invalid ranges, missing deadlines, impossible paused states; retain agreed minute rules |

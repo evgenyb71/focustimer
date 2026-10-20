@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-20
+
+- Inject a `Clock` into `TimerStore` so every current-time read goes through one source; production uses `SystemClock`, and the initializer is now internal for future tests.
+- Inject one `KeyValueStore` into `TimerStore` and use it for every read and write, fixing saves that ignored the supplied store and always wrote to `UserDefaults.standard`; keys and encoding are unchanged.
+- Record combined phase I03-I04 as verified with agent-run build, static checks, and iPhone 17 Pro simulator checks (iOS 26.5), including saved state surviving the update; update the iOS tech stack and merge the I03 and I04 roadmap rows into the completed table.
+
 ## 2026-10-19
 
 - Add a manual-only `start-phase` project skill that picks the next unverified iOS roadmap phase, asks about scope, decisions, and validation, then creates the branch and phase spec; reference it from `AGENTS.md` and `CLAUDE.md`.
