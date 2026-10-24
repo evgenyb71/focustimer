@@ -27,6 +27,7 @@ Move a phase here when its phase spec is marked verified and the work is pushed.
 | I06 | Deterministic `TimerStore` tests: Focus/Break, explicit confirmation, pause/resume, cancel, delayed reconciliation, relaunch from store, notification OK path, countdown display (36 tests; agent-run iPhone 17 Pro iOS 26.5, user-reported Cmd+U). Known issue: pause at expiry adds time (I12) | 2026-10-20 | [I06-baseline-transition-tests](phases/I06-baseline-transition-tests.md) | `75c92c1` on `main` |
 | I07 | Saved and started durations rounded to whole minutes and clamped to Focus 1–240 min and Break 1–120 min (shared with the UI); invalid saved timer state repaired at launch with a correction notice (48 tests: 47 passed, 1 expected failure for I12; agent-run iPhone 17 Pro iOS 26.5, user-reported Cmd+U and notice check) | 2026-10-20 | [I07-enforce-invariants](phases/I07-enforce-invariants.md) | `627f7d5` on `main` |
 | I08 | `schemaVersion` key added; records saved before versioning are migrated at launch with settings and timer state kept, and saved as version 1; a newer or unreadable version is left untouched for I09 (55 tests: 54 passed, 1 expected failure for I12; agent-run iPhone 17 Pro iOS 26.5, user-reported Cmd+U and an upgrade check of real pre-I08 data) | 2026-10-20 | [I08-schema-versioning](phases/I08-schema-versioning.md) | `7625c58` on `main` |
+| I09 | Unreadable `config` or `state` replaced with defaults or idle, the other record kept, correction notice shown, pending alerts cancelled; a newer or unreadable `schemaVersion` keeps defaults in memory and writes nothing at launch, and the first save writes both records and the current version (64 tests: 63 passed, 1 expected failure for I12; agent-run iPhone 17 Pro iOS 26.5, user-reported Cmd+U and two seeded relaunch checks) | 2026-10-24 | [I09-recover-saved-records](phases/I09-recover-saved-records.md) | `0839457` on `main` |
 
 ## Small forward phases
 
@@ -34,7 +35,6 @@ Execute one phase at a time, in order. Before code, write a short phase spec at 
 
 | Phase | Small deliverable | Exit check |
 | --- | --- | --- |
-| I09 | Recover corrupt/partial/unsupported saved records | Safe idle fallback, preserve valid config; relaunch remains usable |
 | I10 | Persist a cycle identity and validate action provenance | An old Focus notification cannot start Break in a newer cycle; duplicate actions are harmless |
 | I11 | Clean up obsolete pending and delivered notifications | Cancel, phase change, and new cycle invalidate old alerts; current valid alert remains actionable |
 | I12 | Settle expiry and clock-edge behavior | Pause at expiry completes; test duplicate callbacks, delayed activation, forward/backward clock changes |

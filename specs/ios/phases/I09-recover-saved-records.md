@@ -1,6 +1,6 @@
 # I09 Recover corrupt, partial, and unsupported saved records
 
-Status: verified, pending commit (2026-10-24): implemented; 64 test functions pass (63 passed, 1 expected failure for I12), agent-run on iPhone 17 Pro iOS 26.5. User-reported Cmd+U and both seeded relaunch cases passed. Implements roadmap phase I09, "Recover corrupt/partial/unsupported saved records". Branch `feat/I09-recover-saved-records`.
+Status: verified (2026-10-24): implemented; 64 test functions pass (63 passed, 1 expected failure for I12), agent-run on iPhone 17 Pro iOS 26.5. User-reported Cmd+U and both seeded relaunch cases passed. Implements roadmap phase I09, "Recover corrupt/partial/unsupported saved records". Commit `8b8c966`, merged to `main` as `0839457` and pushed. Branch `feat/I09-recover-saved-records`.
 
 Context: [roadmap](../roadmap.md), [mission](../mission.md), [tech stack](../tech-stack.md), previous phase [I08](I08-schema-versioning.md) (its handoff lists the open questions answered below).
 
