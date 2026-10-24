@@ -119,3 +119,24 @@ OS notification delivery and real suspension (S1 to S3, N1 to N8 from I02). Corr
 
 - Plan step 4 of the relaunch check (relaunch again and see the saved state with no notice) was not run on the device; it is covered by unit tests (`firstSaveAfterUnsupportedVersionWritesCurrentVersion`, `bothRecordsCorruptStillStarts`).
 - Only seeded records were used, not corruption from a real interrupted write or a newer app build.
+
+## Handoff for the next session (2026-10-24)
+
+For any agent (Claude Code, Codex) picking up the iOS work.
+
+- **State:** I01 to I09 are verified. I09 was merged into `main` as `0839457` and pushed; the roadmap move (`6c195b4`) was merged as `9d72c34`, and `main` matched `origin/main` at that commit. `$update-changelog` was run for I09 before merging. The `feat/I09-recover-saved-records` branch was deleted by the user. The local branch `chore/roadmap-after-I09` is merged and still exists (not deleted). This handoff is on `chore/handoff-2026-10-24`, uncommitted.
+- **Next step:** start I10 (persist a cycle identity and validate action provenance) with `$start-phase` / `/start-phase`; no I10 spec exists yet.
+- **Decided in chat:** everything decided for I09 is recorded above.
+- **Open questions for I10:** where the cycle identity lives (state record, notification `userInfo`, and identifier), how it is migrated (add one `migrations` step and bump `currentSchemaVersion` to 2), and how stale or duplicate actions are ignored; ask the user in `/start-phase`.
+- **Known issues:**
+  - `pauseAtExpiryCompletesInsteadOfAddingTime` is wrapped in `withKnownIssue` for I12; do not remove the marker unless fixing that behavior.
+  - Remaining time or deadlines longer than the configured duration are not checked (I12).
+  - Recovery replaces whole records; there is no per-field recovery and no backup of unreadable data (decided for I09).
+- **Test baseline:** `/tmp/FocusTimerTests-20261024-141126.xcresult` has 64 test functions: 63 passed, 0 failed, 1 expected failure (55 from I08 plus 9 `TimerStoreRecoveryTests`, all in `ios/FocusTimer/FocusTimerTests/FocusTimerTests.swift`). The user reported 64 tests in 5 suites passing with 1 known issue in Cmd+U.
+- **Environment:**
+  - `xcode-select` points at full Xcode, now 27.1 (27A9275, iOS 27.1 SDK only). The first test run after the upgrade rebuilt everything and took about 10 minutes.
+  - Agents run tests on iPhone 17 Pro (iOS 26.5), which is shut down. The user's device is the iPhone 18 Pro Max (iOS 27.0), still booted; leave it alone.
+  - That simulator holds the I09 relaunch data: default durations (60/60 s), a running Focus, `schemaVersion` 1.
+  - Agent build output is in `/tmp/FocusTimerDerivedData` (100 MB) and two `/tmp/FocusTimerTests-*.xcresult` bundles (54 MB). It is untracked and not deleted.
+- **Manual simulator checks that need saved data:** seed through `xcrun simctl spawn <device> defaults write "<container>/Library/Preferences/com.ebochkarev.FocusTimer" …` with the simulator booted and the app stopped, then verify with `defaults export`. Writing the plist file directly misses the simulator's cached preferences. The user launches from the home screen, not Cmd+R. See [I07](I07-enforce-invariants.md#user-reported-xcode).
+- **Still deferred from I02:** suspension and OS notification rows S1 to S3 and N1 to N8 have not been run.
