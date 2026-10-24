@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-24
+
+- Recover unreadable saved records at launch: a `config` or `state` that is present but cannot be decoded (corrupt data, an unknown phase, wrong-typed values) is replaced with the default durations or an idle timer, the other record is kept, the status line shows "Saved timer data was corrected.", and pending completion alerts are cancelled for a replaced state. A missing record on a fresh install shows no notice.
+- Handle a newer, negative, or unreadable `schemaVersion`: launch still uses defaults in memory and writes nothing, now with the correction notice, and the first save afterwards writes both records and the current version, so the next launch reads them instead of ignoring them again.
+- Add 9 recovery tests. Record phase I09 as verified (64 tests on an iPhone 17 Pro simulator, iOS 26.5, with counts from the result bundle; user-reported Cmd+U and two seeded relaunch checks on the user's simulator) and update the iOS mission and tech stack.
+
 ## 2026-10-20
 
 - Inject a `Clock` into `TimerStore` so every current-time read goes through one source; production uses `SystemClock`, and the initializer is now internal for future tests.
@@ -19,6 +25,7 @@
 - Move I07 to the roadmap's completed table with its merge commit, and add a session handoff to the I07 phase spec (next phase I08 and its open questions, known issues, test baseline, environment, and how to seed simulator data for manual checks).
 - Version the saved data: a new `schemaVersion` key covers the `config` and `state` records, which keep their format. Records saved before versioning are migrated at launch through an ordered step list, keeping their settings and timer state, and saved as version 1; a fresh install also saves version 1. A newer, negative, or unreadable version loads defaults in memory and writes nothing at launch, leaving recovery to I09.
 - Add 7 migration tests, and let the in-memory test store record which keys it writes. Record phase I08 as verified (55 tests on an iPhone 17 Pro simulator, iOS 26.5, with counts from the result bundle; user-reported Cmd+U and an upgrade check of real pre-I08 data on the user's simulator) and update the iOS mission and tech stack.
+- Move I08 to the roadmap's completed table with its merge commit.
 
 ## 2026-10-19
 
