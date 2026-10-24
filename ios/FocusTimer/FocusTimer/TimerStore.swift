@@ -82,6 +82,8 @@ final class TimerStore: ObservableObject {
     private let store: any KeyValueStore
     private let notifications: any NotificationScheduling
     private var ticker: Timer?
+    /// True when launch ignored records of a newer or unreadable schema version.
+    private var versionNeedsWrite = false
 
     init(
         clock: any Clock = SystemClock(),
@@ -92,26 +94,32 @@ final class TimerStore: ObservableObject {
         self.store = store
         self.notifications = notifications
         if Self.migrateSavedRecords(in: store, versionKey: schemaVersionKey) {
+            let configurationUnreadable = Self.isUnreadable(Configuration.self, key: configurationKey, in: store)
+            let stateUnreadable = Self.isUnreadable(TimerState.self, key: stateKey, in: store)
             let savedConfiguration = Self.decode(Configuration.self, key: configurationKey, from: store) ?? Configuration()
             let savedState = Self.decode(TimerState.self, key: stateKey, from: store) ?? TimerState()
             configuration = savedConfiguration.normalized
             state = savedState.repaired
-            if configuration != savedConfiguration {
+            if configuration != savedConfiguration || configurationUnreadable {
                 persistConfiguration()
             }
-            if state != savedState {
+            if state != savedState || stateUnreadable {
                 persistState()
-                if state.phase != savedState.phase {
+                // An unreadable state may have been a running phase whose alert is still pending.
+                if state.phase != savedState.phase || stateUnreadable {
                     notifications.cancelAllPendingCompletions()
                 }
             }
-            if configuration != savedConfiguration || state != savedState {
+            if configuration != savedConfiguration || state != savedState || configurationUnreadable || stateUnreadable {
                 noticeMessage = Self.repairNotice
             }
         } else {
-            // Records from a newer or unreadable version are left untouched; recovering them belongs to I09.
+            // Records from a newer or unreadable version are not interpreted and are left untouched at
+            // launch. The first save replaces them and writes the current version.
             configuration = Configuration()
             state = TimerState()
+            versionNeedsWrite = true
+            noticeMessage = Self.repairNotice
         }
         updateDisplayedTime()
         reconcileWithCurrentTime()
@@ -265,13 +273,31 @@ final class TimerStore: ObservableObject {
         }
     }
 
+    /// On the first save after launch ignored an unsupported version, replaces both records and writes
+    /// the current version, so the next launch reads what this app saved.
+    private func claimUnsupportedVersion() {
+        guard versionNeedsWrite else { return }
+        versionNeedsWrite = false
+        if let data = try? JSONEncoder().encode(configuration) {
+            store.setData(data, forKey: configurationKey)
+        }
+        if let data = try? JSONEncoder().encode(state) {
+            store.setData(data, forKey: stateKey)
+        }
+        if let data = try? JSONEncoder().encode(Self.currentSchemaVersion) {
+            store.setData(data, forKey: schemaVersionKey)
+        }
+    }
+
     private func persistConfiguration() {
+        claimUnsupportedVersion()
         if let data = try? JSONEncoder().encode(configuration) {
             store.setData(data, forKey: configurationKey)
         }
     }
 
     private func persistState() {
+        claimUnsupportedVersion()
         if let data = try? JSONEncoder().encode(state) {
             store.setData(data, forKey: stateKey)
         }
@@ -297,6 +323,11 @@ final class TimerStore: ObservableObject {
             store.setData(data, forKey: versionKey)
         }
         return true
+    }
+
+    /// A record that is saved but cannot be decoded. A missing record is not unreadable.
+    private static func isUnreadable<T: Decodable>(_ type: T.Type, key: String, in store: any KeyValueStore) -> Bool {
+        store.data(forKey: key) != nil && decode(type, key: key, from: store) == nil
     }
 
     private static func decode<T: Decodable>(_ type: T.Type, key: String, from store: any KeyValueStore) -> T? {
