@@ -35,9 +35,29 @@ final class RecordingNotificationScheduler: NotificationScheduling {
         case schedule(phase: TimerStore.Phase, deadline: Date, now: Date)
         case cancel(phase: TimerStore.Phase)
         case cancelAll
+        case removeDelivered(phase: TimerStore.Phase)
+        case removeAllDelivered
     }
 
     private(set) var calls: [Call] = []
+    /// Calls that schedule or cancel pending requests, without removals of delivered alerts.
+    var pendingCalls: [Call] {
+        calls.filter {
+            switch $0 {
+            case .removeDelivered, .removeAllDelivered: false
+            default: true
+            }
+        }
+    }
+    /// Removals of delivered alerts only.
+    var deliveredCalls: [Call] {
+        calls.filter {
+            switch $0 {
+            case .removeDelivered, .removeAllDelivered: true
+            default: false
+            }
+        }
+    }
     /// The cycle ID passed with each `schedule` call, in order.
     private(set) var scheduledCycleIDs: [UUID?] = []
 
@@ -52,6 +72,14 @@ final class RecordingNotificationScheduler: NotificationScheduling {
 
     func cancelAllPendingCompletions() {
         calls.append(.cancelAll)
+    }
+
+    func removeDeliveredCompletion(for phase: TimerStore.Phase) {
+        calls.append(.removeDelivered(phase: phase))
+    }
+
+    func removeAllDeliveredCompletions() {
+        calls.append(.removeAllDelivered)
     }
 }
 

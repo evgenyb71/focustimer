@@ -37,6 +37,9 @@ protocol NotificationScheduling {
     func scheduleCompletion(for phase: TimerStore.Phase, at deadline: Date, now: Date, cycleID: UUID?)
     func cancelPendingCompletion(for phase: TimerStore.Phase)
     func cancelAllPendingCompletions()
+    /// Removes a completion alert for the phase that is already in Notification Center.
+    func removeDeliveredCompletion(for phase: TimerStore.Phase)
+    func removeAllDeliveredCompletions()
 }
 
 struct SystemNotificationScheduler: NotificationScheduling {
@@ -87,6 +90,27 @@ struct SystemNotificationScheduler: NotificationScheduling {
 
     func cancelAllPendingCompletions() {
         UNUserNotificationCenter.current().removePendingNotificationRequests(
+            withIdentifiers: [NotificationScheduler.focusIdentifier, NotificationScheduler.breakIdentifier]
+        )
+    }
+
+    func removeDeliveredCompletion(for phase: TimerStore.Phase) {
+        switch phase {
+        case .runningA:
+            UNUserNotificationCenter.current().removeDeliveredNotifications(
+                withIdentifiers: [NotificationScheduler.focusIdentifier]
+            )
+        case .runningB:
+            UNUserNotificationCenter.current().removeDeliveredNotifications(
+                withIdentifiers: [NotificationScheduler.breakIdentifier]
+            )
+        case .idle, .waitingForAConfirm:
+            break
+        }
+    }
+
+    func removeAllDeliveredCompletions() {
+        UNUserNotificationCenter.current().removeDeliveredNotifications(
             withIdentifiers: [NotificationScheduler.focusIdentifier, NotificationScheduler.breakIdentifier]
         )
     }

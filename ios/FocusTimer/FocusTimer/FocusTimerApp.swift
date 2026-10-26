@@ -14,14 +14,16 @@ struct FocusTimerApp: App {
                 .environmentObject(timer)
                 .onChange(of: scenePhase) { _, newPhase in
                     if newPhase == .active {
-                        timer.reconcileWithCurrentTime()
+                        timer.activate()
                     }
                 }
         }
     }
 }
 
-final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+// The delegate methods run on the main actor, so the system completion handlers that Swift calls when they
+// finish also run on the main thread; UIKit requires that after a notification response.
+final class AppDelegate: NSObject, UIApplicationDelegate, @preconcurrency UNUserNotificationCenterDelegate {
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
@@ -33,19 +35,19 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         return true
     }
 
-    nonisolated func userNotificationCenter(
+    func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
         [.banner, .list, .sound]
     }
 
-    nonisolated func userNotificationCenter(
+    func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
         guard response.actionIdentifier == NotificationScheduler.startBreakAction else { return }
         let cycleID = NotificationScheduler.cycleID(in: response.notification.request.content.userInfo)
-        await TimerStore.shared.startBreakFromNotification(cycleID: cycleID)
+        TimerStore.shared.startBreakFromNotification(cycleID: cycleID)
     }
 }
