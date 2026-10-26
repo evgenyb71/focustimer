@@ -1,6 +1,6 @@
 # I10 Persist a cycle identity and validate action provenance
 
-Status: verified (2026-10-26), with one deferral: 80 test functions (79 passed, 1 expected failure for I12), agent-run on iPhone 17 Pro iOS 26.5; user-reported Cmd+U all passed and an upgrade check of version 1 data on the iPhone 18 Pro Max (iOS 27.0). The manual stale-alert check is a ToDo, deferred by the user; the exit check is covered by unit tests only. Implements roadmap phase I10, "Persist a cycle identity and validate action provenance". Commits `ac368fe` (start-phase model check) and `f434784`, merged to `main` as `0d7b35c` and pushed. Branch `feat/I10-cycle-identity`.
+Status: verified (2026-10-26), with one deferral: 80 test functions (79 passed, 1 expected failure for I12), agent-run on iPhone 17 Pro iOS 26.5; user-reported Cmd+U all passed and an upgrade check of version 1 data on the iPhone 18 Pro Max (iOS 27.0). The manual stale-alert check was deferred by the user and then superseded on 2026-10-26 by the [I11](I11-clean-up-alerts.md) Notification Center check, which passed. Implements roadmap phase I10, "Persist a cycle identity and validate action provenance". Commits `ac368fe` (start-phase model check) and `f434784`, merged to `main` as `0d7b35c` and pushed. Branch `feat/I10-cycle-identity`.
 
 Context: [roadmap](../roadmap.md), [mission](../mission.md), [tech stack](../tech-stack.md), previous phase [I09](I09-recover-saved-records.md).
 
@@ -130,7 +130,7 @@ Record `totalTestCount`, `passedTests`, `failedTests`, and expected failures fro
 
 ### ToDo (deferred by the user, 2026-10-26)
 
-- [ ] **Stale-alert check** (see [User-reported (Xcode)](#user-reported-xcode), steps 1 to 5): tap OK on a delivered alert from an earlier cycle after Cancel and a new Focus, and confirm Break does not start; then confirm the current alert's OK starts Break and a repeated OK does nothing. Until it is run, the roadmap exit check ("an old Focus notification cannot start Break in a newer cycle") is verified by unit tests (`actionFromAnEarlierCycleCannotStartBreak`, `actionWithoutOrWithUnknownIDIsIgnored`, `duplicateActionAfterBreakStartedDoesNothing`) and the `userInfo` parsing test, not by a real notification tap.
+- [x] **Superseded (2026-10-26)** by the Notification Center check in [I11](I11-clean-up-alerts.md#user-reported), which passed after a crash fix; once I11 removes old alerts on Cancel, this check can no longer be run as written. Original item: **Stale-alert check** (see [User-reported (Xcode)](#user-reported-xcode), steps 1 to 5): tap OK on a delivered alert from an earlier cycle after Cancel and a new Focus, and confirm Break does not start; then confirm the current alert's OK starts Break and a repeated OK does nothing. Until it is run, the roadmap exit check ("an old Focus notification cannot start Break in a newer cycle") is verified by unit tests (`actionFromAnEarlierCycleCannotStartBreak`, `actionWithoutOrWithUnknownIDIsIgnored`, `duplicateActionAfterBreakStartedDoesNothing`) and the `userInfo` parsing test, not by a real notification tap.
 
 ### Upgrade check, before (2026-10-26)
 

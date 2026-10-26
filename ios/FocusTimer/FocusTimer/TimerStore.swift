@@ -140,6 +140,7 @@ final class TimerStore: ObservableObject {
         }
         updateDisplayedTime()
         reconcileWithCurrentTime()
+        removeObsoleteDeliveredCompletions()
         startTicker()
     }
 
@@ -184,12 +185,16 @@ final class TimerStore: ObservableObject {
 
         configuration = configuration.normalized
         persistConfiguration()
+        // A new cycle makes every delivered alert obsolete. No pending request exists while idle,
+        // and scheduling replaces one with the same identifier.
+        notifications.removeAllDeliveredCompletions()
         startPhase(.runningA, durationSeconds: configuration.durationASeconds, cycleID: UUID())
     }
 
     func startBreak() {
         guard state.phase == .waitingForAConfirm else { return }
         startPhase(.runningB, durationSeconds: configuration.durationBSeconds, cycleID: state.cycleID ?? UUID())
+        notifications.removeDeliveredCompletion(for: .runningA)
     }
 
     /// Starts Break from a Focus notification's action, only when the action belongs to the current
@@ -229,8 +234,16 @@ final class TimerStore: ObservableObject {
         state = TimerState()
         noticeMessage = nil
         notifications.cancelAllPendingCompletions()
+        notifications.removeAllDeliveredCompletions()
         persistState()
         updateDisplayedTime()
+    }
+
+    /// Runs when the app becomes active: catches up with the current time, then removes delivered
+    /// alerts that no longer match the timer.
+    func activate() {
+        reconcileWithCurrentTime()
+        removeObsoleteDeliveredCompletions()
     }
 
     func reconcileWithCurrentTime() {
@@ -260,11 +273,24 @@ final class TimerStore: ObservableObject {
             state = TimerState(phase: .waitingForAConfirm, cycleID: state.cycleID)
         case .runningB:
             state = TimerState()
+            // A delivered Break alert stays until the next activation, so an on-screen banner does not vanish at once.
+            notifications.cancelPendingCompletion(for: .runningB)
         case .idle, .waitingForAConfirm:
             return
         }
         persistState()
         updateDisplayedTime()
+    }
+
+    /// Keeps the delivered Focus alert only while Break waits for confirmation, and the Break alert only while
+    /// Break runs. Uses the phase alone, so it also clears alerts from before cycle IDs or a recovery reset.
+    private func removeObsoleteDeliveredCompletions() {
+        if state.phase != .waitingForAConfirm {
+            notifications.removeDeliveredCompletion(for: .runningA)
+        }
+        if state.phase != .runningB {
+            notifications.removeDeliveredCompletion(for: .runningB)
+        }
     }
 
     private func startTicker() {
