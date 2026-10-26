@@ -135,3 +135,30 @@ Record `totalTestCount`, `passedTests`, `failedTests`, and expected failures fro
 ### Upgrade check, before (2026-10-26)
 
 - The agent read the container preferences on iPhone 18 Pro Max (iOS 27.0) with the app stopped: `config` = `{"durationBSeconds":60,"durationASeconds":60}`, `state` = `{"paused":false,"phase":"waitingForAConfirm"}`, `schemaVersion` = `1`. This is version 1 data in an active phase (waiting for Break) with no cycle ID.
+
+## Handoff for the next session (2026-10-26)
+
+For any agent (Claude Code, Codex) picking up the iOS work.
+
+- **State:** I01 to I10 are verified. I10 (commits `ac368fe`, `f434784`, changelog `5707e17`) was merged into `main` as `0d7b35c` and pushed; the roadmap move (`b05e377`) was merged as `f25697a` and pushed, and `main` matched `origin/main` at that commit. `$update-changelog` was run for I10 before merging. The I10 feature and roadmap branches were deleted. This handoff is on `chore/handoff-2026-10-26`, uncommitted. No other local branches.
+- **Next step:** start I11 (clean up obsolete pending and delivered notifications; exit check: Cancel, phase change, and a new cycle invalidate old alerts, while the current valid alert stays actionable) with `$start-phase` / `/start-phase`. No I11 spec exists yet. The skill now asks first which model should plan the phase.
+- **Decided in chat:** everything decided for I10 is recorded in this spec. The `start-phase` model check (`ac368fe`) is in the Claude Code copy only; the Codex copy at `~/.codex/skills/start-phase` was not changed.
+- **Open questions for I11:**
+  - Whether request identifiers include the cycle ID (for example `focusComplete-<uuid>`), or stay stable with cleanup by `userInfo`.
+  - Which events remove delivered alerts (Cancel, Break start, Break completion, a new Focus) and whether pause removes a delivered alert or only the pending one.
+  - How `NotificationScheduling` grows (for example a `removeDelivered` call) while staying small and testable.
+  - **Order with the I10 ToDo:** once I11 removes old delivered alerts on Cancel and a new cycle, the I10 stale-alert check can no longer be run as written (the old alert will be gone). Decide whether to run the I10 check before I11 lands, or replace it with I11's own checks.
+- **Known issues:**
+  - `pauseAtExpiryCompletesInsteadOfAddingTime` is wrapped in `withKnownIssue` for I12; do not remove the marker unless fixing that behavior.
+  - Remaining time or deadlines longer than the configured duration are not checked (I12).
+  - Old delivered alerts stay in Notification Center after Cancel or a new cycle; their OK is now ignored (I10) but they are not removed (I11).
+- **Test baseline:** `/tmp/FocusTimerTests-20261026-193947.xcresult` has 80 test functions: 79 passed, 0 failed, 1 expected failure (64 from I09 plus 16 `TimerStoreCycleTests`, all in `ios/FocusTimer/FocusTimerTests/FocusTimerTests.swift`). The user reported Cmd+U all passing, without a count.
+- **Environment:**
+  - `xcode-select` points at full Xcode 27.1 (27A9275, iOS 27.1 SDK only; the iOS 26.5 and 27.0 simulator runtimes remain).
+  - Agents run tests on iPhone 17 Pro (iOS 26.5), which is shut down. The user's device is the iPhone 18 Pro Max (iOS 27.0), still booted; leave it alone.
+  - That simulator holds version 2 data: 1-minute durations, waiting for Break, with a cycle ID.
+  - Agent build output is in `/tmp/FocusTimerDerivedData` (103 MB) and four `/tmp/FocusTimerTests-*.xcresult` bundles (about 56 MB). It is untracked and not deleted.
+- **Manual simulator checks that need saved data:** read or seed through `xcrun simctl spawn <device> defaults … "<container>/Library/Preferences/com.ebochkarev.FocusTimer"` with the simulator booted and the app stopped; see [I09](I09-recover-saved-records.md#user-reported).
+- **Deferred items:**
+  - I10 stale-alert tap check (ToDo in this spec).
+  - From I02: suspension and OS notification rows S1 to S3 and N1 to N8.
