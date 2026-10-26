@@ -180,3 +180,34 @@ Branch `fix/I11-cancel-pending-on-focus`, created from `main` at `f475af8` with 
   - First run (`/tmp/FocusTimerTests-20261026-223748.xcresult`): 95 tests, 9 failed, all from the added `.cancelAll` in the assertions above; the new regression test passed.
   - Final run (`/tmp/FocusTimerTests-20261026-223857.xcresult`): `** TEST SUCCEEDED **`. `xcresulttool get test-results summary`: result Passed, `totalTestCount` 95, `passedTests` 94, `failedTests` 0, `skippedTests` 0, `expectedFailures` 1 (`pauseAtExpiryCompletesInsteadOfAddingTime`, I12). Toolchain: Xcode 27.1; destination iPhone 17 Pro, iOS 26.5.
 - **Remaining limitations:** the finding is covered by the unit test only, not reproduced on a simulator; seeding a pending OS request together with an unsupported version is not part of the manual checks. After this fix the user re-ran Cmd+U and reported the expected results (no count stated); the Notification Center check was not re-run.
+
+## Handoff for the next session (2026-10-26)
+
+For any agent (Claude Code, Codex) picking up the iOS work.
+
+- **State:** I01 to I11 are verified and pushed. I11 (`e28d558`, changelog `9463f7f`) was merged as `f475af8`. The Codex review fix (`f73099b`, changelog `8c676ec`) was merged as `7bd31bc`, and the user approved the review. The roadmap move (`3d74d5a`) was merged as `98fe282`, and `main` matched `origin/main` at that commit. All feature and chore branches were deleted. This handoff is on `chore/handoff-2026-10-26`, uncommitted. No other local branches.
+- **Next step:** start I12 (settle expiry and clock-edge behavior; exit check: pause at expiry completes; test duplicate callbacks, delayed activation, forward and backward clock changes) with `$start-phase` / `/start-phase`. No I12 spec exists yet. The skill asks first which model should plan the phase.
+- **Decided in chat:** everything decided for I11, the crash fix, and the review fix is recorded in this spec.
+- **Open questions for I12:**
+  - Pause at or after expiry: complete the phase instead of pausing (Focus waits for Break confirmation, Break returns to idle), as the mission requires; the `withKnownIssue` test already describes the expected result.
+  - Remaining time or a deadline longer than the configured duration (saved or after a backward clock change): clamp, repair with the notice, or accept.
+  - Forward and backward wall-clock jumps: the mission keeps wall-clock deadlines as the baseline; decide what a backward jump does to a running deadline and whether the display may exceed the duration.
+  - Duplicate completion callbacks and delayed activation: confirm which paths need new tests beyond the I06 and I11 coverage.
+- **Known issues:**
+  - `pauseAtExpiryCompletesInsteadOfAddingTime` is wrapped in `withKnownIssue` for I12. Remove the marker only when fixing that behavior.
+  - Remaining time or deadlines longer than the configured duration are not checked (I12).
+  - Alert removal runs only when the app launches or becomes active; nothing removes alerts while the app stays suspended (by design for I11).
+- **Test baseline:** `/tmp/FocusTimerTests-20261026-223857.xcresult` has 95 test functions: 94 passed, 0 failed, 1 expected failure. They are all in `ios/FocusTimer/FocusTimerTests/FocusTimerTests.swift` (7 suites, including `TimerStoreCycleTests` and `TimerStoreAlertCleanupTests`). The user reported Cmd+U with the expected results after the review fix.
+- **Testing notes:**
+  - `RecordingNotificationScheduler` exposes `calls`, `pendingCalls` (schedule and cancel only), `deliveredCalls` (removals only), `scheduledCycleIDs`, and `pendingPhases` (a model of pending requests).
+  - Older tests assert `pendingCalls` because every launch records two delivered-alert removals; Start records `.cancelAll` before the Focus schedule.
+  - `TimerState.ignoringCycle` (test-only) compares timing without the random cycle ID.
+- **Environment:**
+  - `xcode-select` points at full Xcode 27.1 (27A9275, iOS 27.1 SDK; the iOS 26.5 and 27.0 simulator runtimes remain).
+  - Agents run tests on iPhone 17 Pro (iOS 26.5). The user's device is the iPhone 18 Pro Max (iOS 27.0). Both were shut down at handoff.
+  - Agent build output is in `/tmp/FocusTimerDerivedData` (107 MB) and nine `/tmp/FocusTimerTests-*.xcresult` bundles (164 MB in total). It is untracked and not deleted.
+- **Manual simulator checks that need saved data:** read or seed through `xcrun simctl spawn <device> defaults … "<container>/Library/Preferences/com.ebochkarev.FocusTimer"` with the simulator booted and the app stopped; see [I09](I09-recover-saved-records.md#user-reported).
+- **Deferred items:**
+  - From I02: suspension rows S1 to S3 and the notification rows not covered by the I11 Notification Center check.
+  - The I11 review finding is covered by a unit test only, not reproduced on a simulator.
+  - The Codex copy of `start-phase` at `~/.codex/skills/start-phase` does not have the model check.
