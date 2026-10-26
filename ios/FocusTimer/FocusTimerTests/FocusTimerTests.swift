@@ -171,7 +171,7 @@ struct TimerStoreTransitionTests {
 
         timer.startFocus()
 
-        #expect(timer.state == TimerStore.TimerState(
+        #expect(timer.state.ignoringCycle == TimerStore.TimerState(
             phase: .runningA,
             endTimestamp: start.addingTimeInterval(TimeInterval(focusSeconds)),
             paused: false,
@@ -209,7 +209,7 @@ struct TimerStoreTransitionTests {
 
         timer.startFocus()
 
-        #expect(timer.state == TimerStore.TimerState(phase: .waitingForAConfirm))
+        #expect(timer.state.ignoringCycle == TimerStore.TimerState(phase: .waitingForAConfirm))
         #expect(notifications.calls.count == callCount)
     }
 
@@ -241,7 +241,7 @@ struct TimerStoreTransitionTests {
         clock.advance(by: 1)
         timer.reconcileWithCurrentTime()
 
-        #expect(timer.state == TimerStore.TimerState(phase: .waitingForAConfirm))
+        #expect(timer.state.ignoringCycle == TimerStore.TimerState(phase: .waitingForAConfirm))
         #expect(savedState() == timer.state)
         #expect(notifications.calls.count == 1)
     }
@@ -281,7 +281,7 @@ struct TimerStoreTransitionTests {
 
         timer.pauseOrResume()
 
-        #expect(timer.state == TimerStore.TimerState(
+        #expect(timer.state.ignoringCycle == TimerStore.TimerState(
             phase: storePhase(phase),
             endTimestamp: nil,
             paused: true,
@@ -308,7 +308,7 @@ struct TimerStoreTransitionTests {
         timer.pauseOrResume()
 
         let deadline = resumedAt.addingTimeInterval(TimeInterval(duration(phase) - 10))
-        #expect(timer.state == TimerStore.TimerState(
+        #expect(timer.state.ignoringCycle == TimerStore.TimerState(
             phase: storePhase(phase),
             endTimestamp: deadline,
             paused: false,
@@ -332,7 +332,7 @@ struct TimerStoreTransitionTests {
 
         timer.pauseOrResume()
 
-        #expect(timer.state == TimerStore.TimerState(phase: .waitingForAConfirm))
+        #expect(timer.state.ignoringCycle == TimerStore.TimerState(phase: .waitingForAConfirm))
         #expect(notifications.calls.count == callCount)
     }
 
@@ -386,7 +386,7 @@ struct TimerStoreTransitionTests {
         clock.advance(by: TimeInterval(focusSeconds + breakSeconds + 3_600))
         timer.reconcileWithCurrentTime()
 
-        #expect(timer.state == TimerStore.TimerState(phase: .waitingForAConfirm))
+        #expect(timer.state.ignoringCycle == TimerStore.TimerState(phase: .waitingForAConfirm))
         #expect(notifications.calls.count == 1)
     }
 
@@ -434,7 +434,7 @@ extension TimerStoreTransitionTests {
 
         let relaunched = relaunch()
 
-        #expect(relaunched.state == TimerStore.TimerState(phase: .waitingForAConfirm))
+        #expect(relaunched.state.ignoringCycle == TimerStore.TimerState(phase: .waitingForAConfirm))
         #expect(savedState() == relaunched.state)
         #expect(notifications.calls.count == 1)
     }
@@ -459,7 +459,7 @@ extension TimerStoreTransitionTests {
 
         let relaunched = relaunch()
 
-        #expect(relaunched.state == TimerStore.TimerState(
+        #expect(relaunched.state.ignoringCycle == TimerStore.TimerState(
             phase: storePhase(phase),
             endTimestamp: nil,
             paused: true,
@@ -473,7 +473,7 @@ extension TimerStoreTransitionTests {
 
         let relaunched = relaunch()
 
-        #expect(relaunched.state == TimerStore.TimerState(phase: .waitingForAConfirm))
+        #expect(relaunched.state.ignoringCycle == TimerStore.TimerState(phase: .waitingForAConfirm))
         #expect(relaunched.configuration == savedDurations)
     }
 
@@ -484,7 +484,7 @@ extension TimerStoreTransitionTests {
         clock.advance(by: TimeInterval(focusSeconds + 5))
         let confirmedAt = clock.now
 
-        timer.startBreakFromNotification()
+        timer.startBreakFromNotification(cycleID: timer.state.cycleID)
 
         let breakState = TimerStore.TimerState(
             phase: .runningB,
@@ -492,7 +492,7 @@ extension TimerStoreTransitionTests {
             paused: false,
             remainingSeconds: nil
         )
-        #expect(timer.state == breakState)
+        #expect(timer.state.ignoringCycle == breakState)
         #expect(notifications.calls.last == .schedule(
             phase: .runningB,
             deadline: confirmedAt.addingTimeInterval(TimeInterval(breakSeconds)),
@@ -501,9 +501,9 @@ extension TimerStoreTransitionTests {
 
         let callCount = notifications.calls.count
         clock.advance(by: 2)
-        timer.startBreakFromNotification()
+        timer.startBreakFromNotification(cycleID: timer.state.cycleID)
 
-        #expect(timer.state == breakState)
+        #expect(timer.state.ignoringCycle == breakState)
         #expect(notifications.calls.count == callCount)
     }
 
@@ -512,7 +512,7 @@ extension TimerStoreTransitionTests {
         let runningState = timer.state
         clock.advance(by: 10)
 
-        timer.startBreakFromNotification()
+        timer.startBreakFromNotification(cycleID: timer.state.cycleID)
 
         #expect(timer.state == runningState)
         #expect(notifications.calls.count == 1)
@@ -524,7 +524,7 @@ extension TimerStoreTransitionTests {
         let pausedState = timer.state
         clock.advance(by: TimeInterval(focusSeconds + 5))
 
-        timer.startBreakFromNotification()
+        timer.startBreakFromNotification(cycleID: timer.state.cycleID)
 
         #expect(timer.state == pausedState)
     }
@@ -532,7 +532,7 @@ extension TimerStoreTransitionTests {
     @Test func notificationOKWhenIdleDoesNothing() {
         let timer = makeTimer()
 
-        timer.startBreakFromNotification()
+        timer.startBreakFromNotification(cycleID: timer.state.cycleID)
 
         #expect(timer.state == TimerStore.TimerState())
         #expect(notifications.calls.isEmpty)
@@ -705,8 +705,8 @@ struct TimerStoreInvariantTests {
         let expected = timed == .focus
             ? TimerStore.TimerState(phase: .waitingForAConfirm)
             : TimerStore.TimerState()
-        #expect(timer.state == expected)
-        #expect(savedState() == expected)
+        #expect(timer.state.ignoringCycle == expected)
+        #expect(savedState()?.ignoringCycle == expected)
         #expect(notifications.calls == [.cancelAll])
         #expect(timer.statusMessage == TimerStore.repairNotice)
     }
@@ -724,8 +724,8 @@ struct TimerStoreInvariantTests {
 
         let timer = load()
 
-        #expect(timer.state == TimerStore.TimerState(phase: phase))
-        #expect(savedState() == TimerStore.TimerState(phase: phase))
+        #expect(timer.state.ignoringCycle == TimerStore.TimerState(phase: phase))
+        #expect(savedState()?.ignoringCycle == TimerStore.TimerState(phase: phase))
         #expect(notifications.calls.isEmpty)
         #expect(timer.statusMessage == TimerStore.repairNotice)
     }
@@ -738,8 +738,8 @@ struct TimerStoreInvariantTests {
         let timer = load()
 
         let expected = TimerStore.TimerState(phase: phase(timed), endTimestamp: deadline, paused: false, remainingSeconds: nil)
-        #expect(timer.state == expected)
-        #expect(savedState() == expected)
+        #expect(timer.state.ignoringCycle == expected)
+        #expect(savedState()?.ignoringCycle == expected)
         #expect(notifications.calls.isEmpty)
         #expect(timer.displayedSeconds == 30)
     }
@@ -756,8 +756,8 @@ struct TimerStoreInvariantTests {
         let timer = load()
 
         let expected = TimerStore.TimerState(phase: phase(timed), endTimestamp: nil, paused: true, remainingSeconds: 40)
-        #expect(timer.state == expected)
-        #expect(savedState() == expected)
+        #expect(timer.state.ignoringCycle == expected)
+        #expect(savedState()?.ignoringCycle == expected)
         #expect(timer.displayedSeconds == 40)
     }
 
@@ -771,15 +771,15 @@ struct TimerStoreInvariantTests {
 
         let timer = load()
 
-        #expect(timer.state == TimerStore.TimerState(phase: .waitingForAConfirm))
-        #expect(savedState() == TimerStore.TimerState(phase: .waitingForAConfirm))
+        #expect(timer.state.ignoringCycle == TimerStore.TimerState(phase: .waitingForAConfirm))
+        #expect(savedState()?.ignoringCycle == TimerStore.TimerState(phase: .waitingForAConfirm))
     }
 
     // MARK: Valid records and the notice
 
     @Test func validRecordsLoadUnchangedWithoutNotice() {
         let configuration = TimerStore.Configuration(durationASeconds: 25 * 60, durationBSeconds: 5 * 60)
-        let state = TimerStore.TimerState(phase: .runningB, endTimestamp: nil, paused: true, remainingSeconds: 42)
+        let state = TimerStore.TimerState(phase: .runningB, endTimestamp: nil, paused: true, remainingSeconds: 42, cycleID: UUID())
         seed(configuration: configuration, state: state)
         if let version = try? JSONEncoder().encode(TimerStore.currentSchemaVersion) {
             store.setData(version, forKey: "schemaVersion")
@@ -891,15 +891,22 @@ struct TimerStoreMigrationTests {
         seed(configuration: savedConfiguration, state: state(unversioned))
         let savedConfig = store.values["config"]
         let savedState = store.values["state"]
+        let active = unversioned != .idle
 
         let (timer, writes) = load()
 
         #expect(timer.configuration == savedConfiguration)
-        #expect(timer.state == state(unversioned))
+        #expect(timer.state.ignoringCycle == state(unversioned))
+        #expect((timer.state.cycleID != nil) == active)
         #expect(store.values["config"] == savedConfig)
-        #expect(store.values["state"] == savedState)
+        if active {
+            // The 1 → 2 step saves the cycle ID it added.
+            #expect(store.values["state"].flatMap { try? JSONDecoder().decode(TimerStore.TimerState.self, from: $0) } == timer.state)
+        } else {
+            #expect(store.values["state"] == savedState)
+        }
         #expect(savedVersion() == TimerStore.currentSchemaVersion)
-        #expect(writes == ["schemaVersion"])
+        #expect(writes == (active ? ["state", "schemaVersion"] : ["schemaVersion"]))
         #expect(notifications.calls.isEmpty)
         #expect(timer.statusMessage != TimerStore.repairNotice)
     }
@@ -919,7 +926,7 @@ struct TimerStoreMigrationTests {
         let (timer, _) = load()
 
         let expected = timed == .focus ? TimerStore.TimerState(phase: .waitingForAConfirm) : TimerStore.TimerState()
-        #expect(timer.state == expected)
+        #expect(timer.state.ignoringCycle == expected)
         #expect(timer.configuration == savedConfiguration)
         #expect(savedVersion() == TimerStore.currentSchemaVersion)
     }
@@ -946,13 +953,15 @@ struct TimerStoreMigrationTests {
     }
 
     @Test func currentVersionLoadsWithoutWrites() {
-        seed(configuration: savedConfiguration, state: state(.pausedFocus), version: versionData(TimerStore.currentSchemaVersion))
+        var pausedFocus = state(.pausedFocus)
+        pausedFocus.cycleID = UUID()
+        seed(configuration: savedConfiguration, state: pausedFocus, version: versionData(TimerStore.currentSchemaVersion))
         let savedValues = store.values
 
         let (timer, writes) = load()
 
         #expect(timer.configuration == savedConfiguration)
-        #expect(timer.state == state(.pausedFocus))
+        #expect(timer.state == pausedFocus)
         #expect(writes.isEmpty)
         #expect(store.values == savedValues)
     }
@@ -996,6 +1005,7 @@ struct TimerStoreRecoveryTests {
 
     let savedConfiguration = TimerStore.Configuration(durationASeconds: 25 * 60, durationBSeconds: 5 * 60)
     let garbage = Data("not json".utf8)
+    let cycleID = UUID()
 
     func encoded<T: Encodable>(_ value: T) -> Data {
         (try? JSONEncoder().encode(value)) ?? Data()
@@ -1022,7 +1032,7 @@ struct TimerStoreRecoveryTests {
     }
 
     var runningFocus: TimerStore.TimerState {
-        TimerStore.TimerState(phase: .runningA, endTimestamp: clock.now.addingTimeInterval(600), paused: false, remainingSeconds: nil)
+        TimerStore.TimerState(phase: .runningA, endTimestamp: clock.now.addingTimeInterval(600), paused: false, remainingSeconds: nil, cycleID: cycleID)
     }
 
     // MARK: Unsupported versions
@@ -1126,7 +1136,7 @@ struct TimerStoreRecoveryTests {
     }
 
     @Test func wrongTypedDurationsFallBackWholeRecordAndKeepState() {
-        let paused = TimerStore.TimerState(phase: .runningA, endTimestamp: nil, paused: true, remainingSeconds: 900)
+        let paused = TimerStore.TimerState(phase: .runningA, endTimestamp: nil, paused: true, remainingSeconds: 900, cycleID: cycleID)
         seed(config: Data(#"{"durationASeconds":"25","durationBSeconds":300}"#.utf8), state: encoded(paused))
 
         let (timer, _) = load()
@@ -1145,5 +1155,261 @@ struct TimerStoreRecoveryTests {
 
         #expect(timer.statusMessage != TimerStore.repairNotice)
         #expect(writes.isEmpty)
+    }
+}
+
+@MainActor
+struct TimerStoreCycleTests {
+    let clock = FakeClock()
+    let store = InMemoryStore()
+    let notifications = RecordingNotificationScheduler()
+
+    func makeTimer() -> TimerStore {
+        TimerStore(clock: clock, store: store, notifications: notifications)
+    }
+
+    func makeWaitingForBreak() -> TimerStore {
+        let timer = makeTimer()
+        timer.startFocus()
+        clock.advance(by: 60)
+        timer.reconcileWithCurrentTime()
+        return timer
+    }
+
+    func savedState() -> TimerStore.TimerState? {
+        store.values["state"].flatMap { try? JSONDecoder().decode(TimerStore.TimerState.self, from: $0) }
+    }
+
+    func seed(state: Data, version: Int) {
+        store.setData(state, forKey: "state")
+        if let data = try? JSONEncoder().encode(version) {
+            store.setData(data, forKey: "schemaVersion")
+        }
+    }
+
+    func encoded(_ state: TimerStore.TimerState) -> Data {
+        (try? JSONEncoder().encode(state)) ?? Data()
+    }
+
+    // MARK: Lifetime of the cycle ID
+
+    @Test func cycleIDLastsFromFocusStartThroughBreak() {
+        let timer = makeTimer()
+        #expect(timer.state.cycleID == nil)
+
+        timer.startFocus()
+        let cycleID = timer.state.cycleID
+        #expect(cycleID != nil)
+        #expect(savedState()?.cycleID == cycleID)
+
+        clock.advance(by: 60)
+        timer.reconcileWithCurrentTime()
+        #expect(timer.state.phase == .waitingForAConfirm)
+        #expect(timer.state.cycleID == cycleID)
+
+        timer.startBreak()
+        #expect(timer.state.phase == .runningB)
+        #expect(timer.state.cycleID == cycleID)
+        #expect(notifications.scheduledCycleIDs == [cycleID, cycleID])
+
+        clock.advance(by: 60)
+        timer.reconcileWithCurrentTime()
+        #expect(timer.state == TimerStore.TimerState())
+        #expect(savedState() == TimerStore.TimerState())
+    }
+
+    @Test func pauseAndResumeKeepTheCycleID() {
+        let timer = makeTimer()
+        timer.startFocus()
+        let cycleID = timer.state.cycleID
+
+        timer.pauseOrResume()
+        #expect(timer.state.cycleID == cycleID)
+        timer.pauseOrResume()
+
+        #expect(timer.state.cycleID == cycleID)
+        #expect(notifications.scheduledCycleIDs == [cycleID, cycleID])
+    }
+
+    @Test func cancelRemovesTheCycleIDAndTheNextFocusGetsANewOne() {
+        let timer = makeTimer()
+        timer.startFocus()
+        let firstCycle = timer.state.cycleID
+
+        timer.cancel()
+        #expect(timer.state.cycleID == nil)
+        #expect(savedState()?.cycleID == nil)
+
+        timer.startFocus()
+        #expect(timer.state.cycleID != nil)
+        #expect(timer.state.cycleID != firstCycle)
+    }
+
+    @Test func relaunchKeepsTheCycleID() {
+        let timer = makeWaitingForBreak()
+        let cycleID = timer.state.cycleID
+
+        let relaunched = makeTimer()
+
+        #expect(relaunched.state.cycleID == cycleID)
+        #expect(relaunched.statusMessage != TimerStore.repairNotice)
+    }
+
+    // MARK: Notification action provenance
+
+    @Test func matchingActionStartsBreak() {
+        let timer = makeWaitingForBreak()
+
+        timer.startBreakFromNotification(cycleID: timer.state.cycleID)
+
+        #expect(timer.state.phase == .runningB)
+    }
+
+    @Test func matchingActionAfterFocusExpiredWhileSuspendedStartsBreak() {
+        let timer = makeTimer()
+        timer.startFocus()
+        let cycleID = timer.state.cycleID
+        clock.advance(by: 600)
+
+        timer.startBreakFromNotification(cycleID: cycleID)
+
+        #expect(timer.state.phase == .runningB)
+        #expect(timer.state.cycleID == cycleID)
+    }
+
+    @Test func actionFromAnEarlierCycleCannotStartBreak() {
+        let timer = makeTimer()
+        timer.startFocus()
+        let oldCycle = timer.state.cycleID
+        timer.cancel()
+        timer.startFocus()
+        clock.advance(by: 60)
+        timer.reconcileWithCurrentTime()
+        let waiting = timer.state
+        let saved = store.values["state"]
+        let scheduleCount = notifications.scheduledCycleIDs.count
+
+        timer.startBreakFromNotification(cycleID: oldCycle)
+
+        #expect(timer.state == waiting)
+        #expect(store.values["state"] == saved)
+        #expect(notifications.scheduledCycleIDs.count == scheduleCount)
+    }
+
+    @Test func actionFromAnEarlierCycleDoesNotTouchARunningFocus() {
+        let timer = makeTimer()
+        timer.startFocus()
+        let oldCycle = timer.state.cycleID
+        timer.cancel()
+        timer.startFocus()
+        let running = timer.state
+
+        timer.startBreakFromNotification(cycleID: oldCycle)
+
+        #expect(timer.state == running)
+    }
+
+    @Test(arguments: [nil, UUID()] as [UUID?])
+    func actionWithoutOrWithUnknownIDIsIgnored(_ cycleID: UUID?) {
+        let timer = makeWaitingForBreak()
+        let waiting = timer.state
+        let scheduleCount = notifications.scheduledCycleIDs.count
+
+        timer.startBreakFromNotification(cycleID: cycleID)
+
+        #expect(timer.state == waiting)
+        #expect(notifications.scheduledCycleIDs.count == scheduleCount)
+    }
+
+    @Test func duplicateActionAfterBreakStartedDoesNothing() {
+        let timer = makeWaitingForBreak()
+        let cycleID = timer.state.cycleID
+        timer.startBreakFromNotification(cycleID: cycleID)
+        let breakState = timer.state
+        let scheduleCount = notifications.scheduledCycleIDs.count
+        clock.advance(by: 5)
+
+        timer.startBreakFromNotification(cycleID: cycleID)
+
+        #expect(timer.state == breakState)
+        #expect(notifications.scheduledCycleIDs.count == scheduleCount)
+    }
+
+    @Test func notificationUserInfoCarriesTheCycleID() {
+        let cycleID = UUID()
+
+        #expect(NotificationScheduler.cycleID(in: [NotificationScheduler.cycleIDKey: cycleID.uuidString]) == cycleID)
+        #expect(NotificationScheduler.cycleID(in: [:]) == nil)
+        #expect(NotificationScheduler.cycleID(in: [NotificationScheduler.cycleIDKey: "not a uuid"]) == nil)
+    }
+
+    // MARK: Migration 1 → 2
+
+    @Test(arguments: [UnversionedState.runningFocus, .runningBreak, .pausedFocus, .pausedBreak, .waitingForBreak])
+    func version1ActiveStateGetsACycleIDWithoutNotice(_ fixture: UnversionedState) {
+        let deadline = clock.now.addingTimeInterval(600)
+        let state: TimerStore.TimerState = switch fixture {
+        case .idle: TimerStore.TimerState()
+        case .runningFocus: TimerStore.TimerState(phase: .runningA, endTimestamp: deadline)
+        case .runningBreak: TimerStore.TimerState(phase: .runningB, endTimestamp: deadline)
+        case .pausedFocus: TimerStore.TimerState(phase: .runningA, paused: true, remainingSeconds: 300)
+        case .pausedBreak: TimerStore.TimerState(phase: .runningB, paused: true, remainingSeconds: 30)
+        case .waitingForBreak: TimerStore.TimerState(phase: .waitingForAConfirm)
+        }
+        seed(state: encoded(state), version: 1)
+
+        let timer = makeTimer()
+
+        #expect(timer.state.ignoringCycle == state)
+        #expect(timer.state.cycleID != nil)
+        #expect(savedState() == timer.state)
+        #expect(store.values["schemaVersion"] == (try? JSONEncoder().encode(2)))
+        #expect(timer.statusMessage != TimerStore.repairNotice)
+        #expect(notifications.calls.isEmpty)
+    }
+
+    @Test func version1IdleStateGetsNoCycleID() {
+        seed(state: encoded(TimerStore.TimerState()), version: 1)
+
+        let timer = makeTimer()
+
+        #expect(timer.state == TimerStore.TimerState())
+        #expect(savedState() == TimerStore.TimerState())
+        #expect(store.writtenKeys.filter { $0 == "state" }.count == 1)
+    }
+
+    // MARK: Repair
+
+    @Test func version2ActiveStateWithoutIDIsRepairedWithNotice() {
+        let deadline = clock.now.addingTimeInterval(600)
+        let running = TimerStore.TimerState(phase: .runningA, endTimestamp: deadline)
+        seed(state: encoded(running), version: 2)
+
+        let timer = makeTimer()
+
+        #expect(timer.state.ignoringCycle == running)
+        #expect(timer.state.cycleID != nil)
+        #expect(savedState() == timer.state)
+        #expect(timer.statusMessage == TimerStore.repairNotice)
+        #expect(notifications.calls.isEmpty)
+    }
+
+    @Test func idleWithACycleIDIsRepairedWithNotice() {
+        seed(state: encoded(TimerStore.TimerState(cycleID: UUID())), version: 2)
+
+        let timer = makeTimer()
+
+        #expect(timer.state == TimerStore.TimerState())
+        #expect(savedState() == TimerStore.TimerState())
+        #expect(timer.statusMessage == TimerStore.repairNotice)
+    }
+
+    @Test func unreadableCycleIDMakesTheStateUnreadable() {
+        seed(state: Data(#"{"phase":"waitingForAConfirm","paused":false,"cycleID":"abc"}"#.utf8), version: 2)
+
+        let timer = makeTimer()
+
+        #expect(timer.state == TimerStore.TimerState())
+        #expect(timer.statusMessage == TimerStore.repairNotice)
     }
 }

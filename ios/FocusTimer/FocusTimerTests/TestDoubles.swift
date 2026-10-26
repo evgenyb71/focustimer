@@ -38,9 +38,12 @@ final class RecordingNotificationScheduler: NotificationScheduling {
     }
 
     private(set) var calls: [Call] = []
+    /// The cycle ID passed with each `schedule` call, in order.
+    private(set) var scheduledCycleIDs: [UUID?] = []
 
-    func scheduleCompletion(for phase: TimerStore.Phase, at deadline: Date, now: Date) {
+    func scheduleCompletion(for phase: TimerStore.Phase, at deadline: Date, now: Date, cycleID: UUID?) {
         calls.append(.schedule(phase: phase, deadline: deadline, now: now))
+        scheduledCycleIDs.append(cycleID)
     }
 
     func cancelPendingCompletion(for phase: TimerStore.Phase) {
@@ -49,5 +52,14 @@ final class RecordingNotificationScheduler: NotificationScheduling {
 
     func cancelAllPendingCompletions() {
         calls.append(.cancelAll)
+    }
+}
+
+extension TimerStore.TimerState {
+    /// The state without its cycle ID, for tests about timing rather than cycle identity.
+    var ignoringCycle: TimerStore.TimerState {
+        var state = self
+        state.cycleID = nil
+        return state
     }
 }

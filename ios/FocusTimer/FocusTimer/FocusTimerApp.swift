@@ -44,7 +44,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
-        guard response.actionIdentifier == "START_BREAK" else { return }
-        await TimerStore.shared.startBreakFromNotification()
+        guard response.actionIdentifier == NotificationScheduler.startBreakAction else { return }
+        let cycleID = NotificationScheduler.cycleID(in: response.notification.request.content.userInfo)
+        await TimerStore.shared.startBreakFromNotification(cycleID: cycleID)
     }
 }
