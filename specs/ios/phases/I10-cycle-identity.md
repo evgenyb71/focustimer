@@ -1,6 +1,6 @@
 # I10 Persist a cycle identity and validate action provenance
 
-Status: verified (2026-10-26), with one deferral: 80 test functions (79 passed, 1 expected failure for I12), agent-run on iPhone 17 Pro iOS 26.5; user-reported Cmd+U all passed and an upgrade check of version 1 data on the iPhone 18 Pro Max (iOS 27.0). The manual stale-alert check is a ToDo, deferred by the user; the exit check is covered by unit tests only. Implements roadmap phase I10, "Persist a cycle identity and validate action provenance". Branch `feat/I10-cycle-identity`.
+Status: verified (2026-10-26), with one deferral: 80 test functions (79 passed, 1 expected failure for I12), agent-run on iPhone 17 Pro iOS 26.5; user-reported Cmd+U all passed and an upgrade check of version 1 data on the iPhone 18 Pro Max (iOS 27.0). The manual stale-alert check is a ToDo, deferred by the user; the exit check is covered by unit tests only. Implements roadmap phase I10, "Persist a cycle identity and validate action provenance". Commits `ac368fe` (start-phase model check) and `f434784`, merged to `main` as `0d7b35c` and pushed. Branch `feat/I10-cycle-identity`.
 
 Context: [roadmap](../roadmap.md), [mission](../mission.md), [tech stack](../tech-stack.md), previous phase [I09](I09-recover-saved-records.md).
 
