@@ -10,6 +10,13 @@ allowed-tools: Bash(git status:*), Bash(git branch:*), Bash(git switch:*), Bash(
 
 Prepare one small iOS roadmap phase for implementation. The user invokes this explicitly. Produce a branch and a phase spec only: do not implement, build, commit, push, or merge.
 
+## 0. Model check
+
+Before reading anything or running any command, call `AskUserQuestion` with one question: "This session is running on <your model name from the system prompt>. Which model should plan this phase?" Options: "Keep <current model> (Recommended)", "Switch to Opus", and "Switch to another model" (the user can also type one). A skill cannot change the model itself.
+
+- If the user keeps the current model, continue to step 1.
+- If the user wants a different one, stop. Tell them to switch in the app's model picker (or `/model` in the terminal), then run `/start-phase` again. Read nothing and write nothing in this session.
+
 ## 1. Preflight
 
 1. Read `AGENTS.md`, `specs/ios/mission.md`, `specs/ios/tech-stack.md`, and `specs/ios/roadmap.md`. Do not edit `chrome/` or `specs/history/`.
