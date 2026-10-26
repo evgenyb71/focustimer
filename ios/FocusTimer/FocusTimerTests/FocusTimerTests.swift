@@ -20,7 +20,8 @@ struct TimerStoreNotificationTests {
 
         #expect(timer.state.phase == .runningA)
         #expect(notifications.pendingCalls == [
-            .schedule(phase: .runningA, deadline: start.addingTimeInterval(60), now: start)
+            .cancelAll,
+            .schedule(phase: .runningA, deadline: start.addingTimeInterval(60), now: start),
         ])
     }
 
@@ -72,7 +73,8 @@ struct TimerStoreNotificationTests {
         timer.reconcileWithCurrentTime()
 
         #expect(timer.state.phase == .waitingForAConfirm)
-        #expect(notifications.pendingCalls.count == 1)
+        // Start's .cancelAll and the Focus schedule, nothing more.
+        #expect(notifications.pendingCalls.count == 2)
 
         let confirmedAt = clock.now
         timer.startBreak()
@@ -200,7 +202,8 @@ struct TimerStoreTransitionTests {
         timer.startFocus()
 
         #expect(timer.state == runningState)
-        #expect(notifications.pendingCalls.count == 1)
+        // Start's .cancelAll and the Focus schedule, nothing more.
+        #expect(notifications.pendingCalls.count == 2)
     }
 
     @Test func startFocusIsIgnoredWhileWaiting() {
@@ -229,7 +232,8 @@ struct TimerStoreTransitionTests {
         timer.startBreak()
 
         #expect(timer.state == runningState)
-        #expect(notifications.pendingCalls.count == 1)
+        // Start's .cancelAll and the Focus schedule, nothing more.
+        #expect(notifications.pendingCalls.count == 2)
     }
 
     @Test func focusExpiryWaitsForConfirmation() {
@@ -243,7 +247,8 @@ struct TimerStoreTransitionTests {
 
         #expect(timer.state.ignoringCycle == TimerStore.TimerState(phase: .waitingForAConfirm))
         #expect(savedState() == timer.state)
-        #expect(notifications.pendingCalls.count == 1)
+        // Start's .cancelAll and the Focus schedule, nothing more.
+        #expect(notifications.pendingCalls.count == 2)
     }
 
     @Test func breakNeverStartsByItself() {
@@ -255,7 +260,8 @@ struct TimerStoreTransitionTests {
         }
 
         #expect(timer.state.phase == .waitingForAConfirm)
-        #expect(notifications.pendingCalls.count == 1)
+        // Start's .cancelAll and the Focus schedule, nothing more.
+        #expect(notifications.pendingCalls.count == 2)
     }
 
     @Test func breakExpiryReturnsToIdleKeepingConfiguration() {
@@ -387,7 +393,8 @@ struct TimerStoreTransitionTests {
         timer.reconcileWithCurrentTime()
 
         #expect(timer.state.ignoringCycle == TimerStore.TimerState(phase: .waitingForAConfirm))
-        #expect(notifications.pendingCalls.count == 1)
+        // Start's .cancelAll and the Focus schedule, nothing more.
+        #expect(notifications.pendingCalls.count == 2)
     }
 
     @Test func delayedBreakReconciliationOnlyReturnsToIdle() {
@@ -437,7 +444,8 @@ extension TimerStoreTransitionTests {
 
         #expect(relaunched.state.ignoringCycle == TimerStore.TimerState(phase: .waitingForAConfirm))
         #expect(savedState() == relaunched.state)
-        #expect(notifications.pendingCalls.count == 1)
+        // Start's .cancelAll and the Focus schedule, nothing more.
+        #expect(notifications.pendingCalls.count == 2)
     }
 
     @Test func relaunchAfterBreakDeadlineReturnsToIdle() {
@@ -516,7 +524,8 @@ extension TimerStoreTransitionTests {
         timer.startBreakFromNotification(cycleID: timer.state.cycleID)
 
         #expect(timer.state == runningState)
-        #expect(notifications.pendingCalls.count == 1)
+        // Start's .cancelAll and the Focus schedule, nothing more.
+        #expect(notifications.pendingCalls.count == 2)
     }
 
     @Test func notificationOKWhilePausedDoesNothing() {
@@ -1451,6 +1460,30 @@ struct TimerStoreAlertCleanupTests {
         timer.startFocus()
 
         #expect(deliveredCalls(after: mark) == [.removeAllDelivered])
+    }
+
+    @Test func focusStartAfterUnsupportedVersionCancelsAnOldPendingBreakRequest() {
+        // A Break request scheduled by an earlier run is still pending when launch ignores the saved records.
+        notifications.scheduleCompletion(for: .runningB, at: clock.now.addingTimeInterval(300), now: clock.now, cycleID: UUID())
+        if let version = try? JSONEncoder().encode(TimerStore.currentSchemaVersion + 1) {
+            store.setData(version, forKey: "schemaVersion")
+        }
+        let timer = makeTimer()
+        #expect(timer.state == TimerStore.TimerState())
+        #expect(notifications.pendingPhases == [.runningB])
+        let mark = notifications.calls.count
+
+        timer.startFocus()
+
+        let calls = Array(notifications.calls.dropFirst(mark))
+        let cancelIndex = calls.firstIndex(of: .cancelAll)
+        let scheduleIndex = calls.firstIndex { if case .schedule = $0 { true } else { false } }
+        #expect(cancelIndex != nil)
+        #expect(scheduleIndex != nil)
+        if let cancelIndex, let scheduleIndex {
+            #expect(cancelIndex < scheduleIndex)
+        }
+        #expect(notifications.pendingPhases == [.runningA])
     }
 
     @Test func breakStartInTheAppRemovesTheDeliveredFocusAlert() {

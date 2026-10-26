@@ -61,17 +61,24 @@ final class RecordingNotificationScheduler: NotificationScheduling {
     /// The cycle ID passed with each `schedule` call, in order.
     private(set) var scheduledCycleIDs: [UUID?] = []
 
+    /// Phases with a pending completion request, modelled like Notification Center: scheduling replaces
+    /// the request for the same phase, and cancelling removes it.
+    private(set) var pendingPhases: Set<TimerStore.Phase> = []
+
     func scheduleCompletion(for phase: TimerStore.Phase, at deadline: Date, now: Date, cycleID: UUID?) {
         calls.append(.schedule(phase: phase, deadline: deadline, now: now))
         scheduledCycleIDs.append(cycleID)
+        pendingPhases.insert(phase)
     }
 
     func cancelPendingCompletion(for phase: TimerStore.Phase) {
         calls.append(.cancel(phase: phase))
+        pendingPhases.remove(phase)
     }
 
     func cancelAllPendingCompletions() {
         calls.append(.cancelAll)
+        pendingPhases.removeAll()
     }
 
     func removeDeliveredCompletion(for phase: TimerStore.Phase) {

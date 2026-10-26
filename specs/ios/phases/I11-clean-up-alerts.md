@@ -1,6 +1,6 @@
 # I11 Clean up obsolete pending and delivered notifications
 
-Status: verified (2026-10-26): 94 test functions (93 passed, 1 expected failure for I12), agent-run on iPhone 17 Pro iOS 26.5; user-reported Cmd+U and the full Notification Center check on the iPhone 18 Pro Max (iOS 27.0) after fixing a pre-existing crash when tapping a notification's OK (see the defect section). The check replaces the I10 stale-alert ToDo. Implements roadmap phase I11, "Clean up obsolete pending and delivered notifications". Branch `feat/I11-clean-up-alerts`.
+Status: verified (2026-10-26), after the Codex review finding was fixed on `fix/I11-cancel-pending-on-focus`: 95 test functions (94 passed, 1 expected failure for I12), agent-run on iPhone 17 Pro iOS 26.5, including a regression test for the finding. Earlier evidence stands for the checks run: user-reported Cmd+U and the full Notification Center check on the iPhone 18 Pro Max (iOS 27.0) after fixing a pre-existing crash when tapping a notification's OK (see the defect section); after the review fix the user re-ran Cmd+U with the expected results; the manual check was not re-run. The check replaces the I10 stale-alert ToDo. Implements roadmap phase I11, "Clean up obsolete pending and delivered notifications". Original branch `feat/I11-clean-up-alerts`, merged locally as `f475af8`; review fix on `fix/I11-cancel-pending-on-focus`. Not yet pushed.
 
 Context: [roadmap](../roadmap.md), [mission](../mission.md), [tech stack](../tech-stack.md), previous phase [I10](I10-cycle-identity.md).
 
@@ -16,7 +16,7 @@ Today `TimerStore` removes pending completion requests on pause, Cancel, and rep
 
 - **Events that remove alerts:**
   - Starting Break, in the app or from the alert's OK, removes the delivered Focus alert.
-  - Cancel and starting a new Focus remove all pending and delivered completion alerts. (Implemented: Focus start removes all delivered alerts but makes no pending-cancel call, because no pending request exists while idle and scheduling replaces one with the same identifier; see the implementation notes.)
+  - Cancel and starting a new Focus remove all pending and delivered completion alerts. (Implemented as decided after the Codex review: Focus start cancels all pending requests and removes all delivered alerts. An earlier version skipped the pending cancel on the wrong assumption that nothing is pending while idle; see the review finding.)
   - Break completion removes a pending Break request but leaves a delivered Break alert alone. The next launch, activation, Focus start, or Cancel clears it. This avoids a banner that appears and vanishes within a second while the app is open.
 - **Launch and activation clean up by phase.** On launch and on each foreground activation, after reconciling, the delivered Focus alert is removed unless the app is waiting for Break confirmation, and the delivered Break alert is removed unless Break is running. This also clears leftovers from before I10 and after a recovery reset. It needs no reading of Notification Center.
 - **Stable identifiers.** Requests stay `focusComplete` and `breakComplete`. Only one cycle exists at a time, and a new request with the same identifier replaces the old one, so removal by the stable identifier is enough.
@@ -118,7 +118,7 @@ Record `totalTestCount`, `passedTests`, `failedTests`, and expected failures fro
 
 ### Implementation notes
 
-- Focus start calls only `removeAllDeliveredCompletions()`. A pending-cancel call there would be redundant and would have changed the exact pending-call counts asserted by many I05 to I10 tests.
+- ~~Focus start calls only `removeAllDeliveredCompletions()`.~~ Superseded by the Codex review finding below: Focus start now calls `cancelAllPendingCompletions()` and then `removeAllDeliveredCompletions()`. The skipped cancel was wrong, not just redundant: launch can ignore an unsupported saved version while a Break request is still pending.
 - `RecordingNotificationScheduler` has `pendingCalls` (schedule and cancel calls) and `deliveredCalls` (removals). Existing tests that assert exact call lists now read `pendingCalls`, because every `TimerStore` launch now records two delivered-alert removals. The new suite asserts the full `calls` list where order matters.
 - `FocusTimerApp` calls `TimerStore.activate()` on `.active`; the one-second ticker still calls only `reconcileWithCurrentTime()`, which removes nothing (tested).
 
@@ -144,3 +144,39 @@ Record `totalTestCount`, `passedTests`, `failedTests`, and expected failures fro
 - **Alternatives considered:** keep the methods `nonisolated` and use the completion-handler variants, calling the handler from a main-actor task. The SDK's handler is not marked `Sendable`, so Swift 6 would need an unsafe capture to move it to the main actor. The main-actor conformance is smaller and needs no unsafe code.
 - **Residual risk:** `@preconcurrency` makes Swift check at run time that UserNotifications calls these methods on the main thread. If it ever called them on another thread, the app would stop with an isolation error. The manual check exercises this path.
 - **Verification:** the build and the 94 unit tests pass after the fix (agent-run, below). The unit tests cannot cover the delegate; the user's re-run of the Notification Center check (below) showed no crash.
+
+## Review finding and handoff (Codex, 2026-10-26)
+
+### P2: new Focus can retain an obsolete pending Break request
+
+Approval is withheld until this finding is fixed and verified. This supersedes the Focus-start implementation note above that pending cancellation is redundant.
+
+- **Location:** `ios/FocusTimer/FocusTimer/TimerStore.swift`, `startFocus()` (lines 188–191 at review time).
+- **Evidence:** source review, not a newly run simulator reproduction. The unsupported-schema launch path loads idle defaults without cancelling existing pending completions. `startFocus()` removes delivered alerts and schedules `focusComplete`, but never cancels an old `breakComplete` request. Scheduling replaces only the request with the same identifier.
+- **Trigger:** an unsupported or unreadable schema version is loaded while a previously scheduled Break completion remains pending; the user then starts a new Focus.
+- **Impact:** the old Break alert can fire during the new Focus. Being idle does not establish that Notification Center has no pending requests, so the current implementation does not meet I11's new-cycle cleanup requirement.
+- **Required fix:** cancel all pending completion requests before scheduling the new Focus, retain delivered-alert cleanup, and correct the assumption in the code comment and this spec's implementation notes. Update existing assertions where the additional cancellation is intentional; do not omit cancellation merely to preserve old call counts.
+
+### Remaining work and acceptance checks
+
+- [x] Update `startFocus()` as described above.
+- [x] Add a deterministic regression covering unsupported-schema recovery with an old pending Break request, followed by Start. Assert cancellation of all pending completions before the new Focus is scheduled. Prefer a scheduler double that models pending requests so the test also proves the old Break request is gone and the new Focus request remains.
+- [x] Run the FocusTimer unit suite per the toolchain and destination checks in `AGENTS.md`; confirm and record the executed count from the result bundle, with zero unexpected failures and only the existing I12 expected failure.
+- [x] Record the fix, actual validation results, and any remaining limitations here; restore verified status only after the finding is resolved.
+
+Review checks: `git diff --check a66b805..HEAD` passed. Codex independently read `/tmp/FocusTimerTests-20261026-221251.xcresult`: 94 test functions, 93 passed, 0 failed, 1 expected failure. Those results predate this finding's fix and do not establish coverage of the recovery path above. No tests were rerun during review.
+
+At handoff, `main` was clean and three commits ahead of `origin/main` before this documentation edit. The user explicitly authorized this phase-document edit on `main`; implementation, commits, push, merge, and deletion were not part of that request.
+
+### Resolution (Claude Code, 2026-10-26)
+
+Branch `fix/I11-cancel-pending-on-focus`, created from `main` at `f475af8` with Codex's uncommitted review edits to this spec carried over.
+
+- **Fix (`TimerStore.swift`, `startFocus()`):** cancels all pending completion requests, then removes all delivered alerts, then schedules the new Focus. The code comment now states that idle does not prove nothing is pending, and names the unsupported-version launch path.
+- **Scheduler double (`TestDoubles.swift`):** `RecordingNotificationScheduler.pendingPhases` models pending requests like Notification Center. Scheduling adds the phase (replacing a request for the same phase), `cancelPendingCompletion(for:)` removes it, and `cancelAllPendingCompletions()` clears it.
+- **Regression test:** `TimerStoreAlertCleanupTests.focusStartAfterUnsupportedVersionCancelsAnOldPendingBreakRequest`. It schedules a Break request on the double as an earlier run would have, seeds `schemaVersion` = current + 1, and launches: the state is idle and the Break request is still pending. After `startFocus()`, `.cancelAll` comes before the Focus `.schedule`, and `pendingPhases` is exactly `[.runningA]`, so the old Break request is gone and the new Focus request remains.
+- **Intentional assertion updates:** nine I05 to I10 tests expected exactly one notification call after Start. Eight now expect two (Start's `.cancelAll` and the Focus schedule) with a comment; `startFocusSchedulesFocusCompletion` now expects `[.cancelAll, .schedule(...)]`. No assertion was relaxed beyond the added call.
+- **Validation:**
+  - First run (`/tmp/FocusTimerTests-20261026-223748.xcresult`): 95 tests, 9 failed, all from the added `.cancelAll` in the assertions above; the new regression test passed.
+  - Final run (`/tmp/FocusTimerTests-20261026-223857.xcresult`): `** TEST SUCCEEDED **`. `xcresulttool get test-results summary`: result Passed, `totalTestCount` 95, `passedTests` 94, `failedTests` 0, `skippedTests` 0, `expectedFailures` 1 (`pauseAtExpiryCompletesInsteadOfAddingTime`, I12). Toolchain: Xcode 27.1; destination iPhone 17 Pro, iOS 26.5.
+- **Remaining limitations:** the finding is covered by the unit test only, not reproduced on a simulator; seeding a pending OS request together with an unsupported version is not part of the manual checks. After this fix the user re-ran Cmd+U and reported the expected results (no count stated); the Notification Center check was not re-run.
