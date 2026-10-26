@@ -5,7 +5,14 @@ enum NotificationScheduler {
     static let focusIdentifier = "focusComplete"
     static let breakIdentifier = "breakComplete"
     static let focusCategory = "FOCUS_COMPLETE"
-    static let startBreakAction = "START_BREAK"
+    nonisolated static let startBreakAction = "START_BREAK"
+    /// `userInfo` key holding the cycle ID as a UUID string.
+    nonisolated static let cycleIDKey = "cycleID"
+
+    /// The cycle ID a completion notification was scheduled for, or nil if it has none.
+    nonisolated static func cycleID(in userInfo: [AnyHashable: Any]) -> UUID? {
+        (userInfo[cycleIDKey] as? String).flatMap(UUID.init(uuidString:))
+    }
 
     static func configureCategories() {
         let action = UNNotificationAction(
@@ -27,16 +34,19 @@ enum NotificationScheduler {
 }
 
 protocol NotificationScheduling {
-    func scheduleCompletion(for phase: TimerStore.Phase, at deadline: Date, now: Date)
+    func scheduleCompletion(for phase: TimerStore.Phase, at deadline: Date, now: Date, cycleID: UUID?)
     func cancelPendingCompletion(for phase: TimerStore.Phase)
     func cancelAllPendingCompletions()
 }
 
 struct SystemNotificationScheduler: NotificationScheduling {
-    func scheduleCompletion(for phase: TimerStore.Phase, at deadline: Date, now: Date) {
+    func scheduleCompletion(for phase: TimerStore.Phase, at deadline: Date, now: Date, cycleID: UUID?) {
         let identifier: String
         let content = UNMutableNotificationContent()
         content.sound = .default
+        if let cycleID {
+            content.userInfo = [NotificationScheduler.cycleIDKey: cycleID.uuidString]
+        }
 
         switch phase {
         case .runningA:

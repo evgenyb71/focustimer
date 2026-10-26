@@ -36,23 +36,29 @@ final class TimerStore: ObservableObject {
         var endTimestamp: Date?
         var paused = false
         var remainingSeconds: Int?
+        /// Identifies one Focus → Break cycle. Idle has none; every other phase has one.
+        var cycleID: UUID?
 
         /// Fields that do not belong to the phase are removed. A running phase without a
         /// deadline falls back to idle; a paused phase without positive remaining time is
         /// treated as expired, so Focus waits for Break confirmation and Break returns to idle.
+        /// An active phase without a cycle ID gets a new one.
         var repaired: TimerState {
+            let cycleID = cycleID ?? UUID()
             switch phase {
-            case .idle, .waitingForAConfirm:
-                return TimerState(phase: phase)
+            case .idle:
+                return TimerState()
+            case .waitingForAConfirm:
+                return TimerState(phase: phase, cycleID: cycleID)
             case .runningA, .runningB:
                 if paused {
                     guard let remainingSeconds, remainingSeconds > 0 else {
-                        return TimerState(phase: phase == .runningA ? .waitingForAConfirm : .idle)
+                        return phase == .runningA ? TimerState(phase: .waitingForAConfirm, cycleID: cycleID) : TimerState()
                     }
-                    return TimerState(phase: phase, endTimestamp: nil, paused: true, remainingSeconds: remainingSeconds)
+                    return TimerState(phase: phase, endTimestamp: nil, paused: true, remainingSeconds: remainingSeconds, cycleID: cycleID)
                 }
                 guard let endTimestamp else { return TimerState() }
-                return TimerState(phase: phase, endTimestamp: endTimestamp, paused: false, remainingSeconds: nil)
+                return TimerState(phase: phase, endTimestamp: endTimestamp, paused: false, remainingSeconds: nil, cycleID: cycleID)
             }
         }
     }
@@ -60,12 +66,23 @@ final class TimerStore: ObservableObject {
     static let repairNotice = "Saved timer data was corrected."
 
     /// Version of the saved `config` and `state` format. Records saved before versioning are version 0.
-    nonisolated static let currentSchemaVersion = 1
+    nonisolated static let currentSchemaVersion = 2
 
     /// Steps that update saved records by one version, in order: the step at index n migrates version n to n + 1.
-    private static let migrations: [(any KeyValueStore) -> Void] = [
+    private static let migrations: [@MainActor (any KeyValueStore) -> Void] = [
         // 0 → 1: unversioned records already have the version 1 format; only the version is added.
         { _ in },
+        // 1 → 2: an active cycle gets a cycle ID and keeps its timer. Alerts scheduled before the
+        // upgrade carry no ID, so their action is ignored. An unreadable state is left for recovery.
+        { store in
+            guard let data = store.data(forKey: TimerStore.stateKey),
+                  var state = try? JSONDecoder().decode(TimerState.self, from: data),
+                  state.phase != .idle, state.cycleID == nil else { return }
+            state.cycleID = UUID()
+            if let data = try? JSONEncoder().encode(state) {
+                store.setData(data, forKey: TimerStore.stateKey)
+            }
+        },
     ]
 
     static let shared = TimerStore()
@@ -75,9 +92,9 @@ final class TimerStore: ObservableObject {
     @Published private(set) var displayedSeconds: Int?
     @Published private(set) var noticeMessage: String?
 
-    private let configurationKey = "config"
-    private let stateKey = "state"
-    private let schemaVersionKey = "schemaVersion"
+    private static let configurationKey = "config"
+    private static let stateKey = "state"
+    private static let schemaVersionKey = "schemaVersion"
     private let clock: any Clock
     private let store: any KeyValueStore
     private let notifications: any NotificationScheduling
@@ -93,11 +110,11 @@ final class TimerStore: ObservableObject {
         self.clock = clock
         self.store = store
         self.notifications = notifications
-        if Self.migrateSavedRecords(in: store, versionKey: schemaVersionKey) {
-            let configurationUnreadable = Self.isUnreadable(Configuration.self, key: configurationKey, in: store)
-            let stateUnreadable = Self.isUnreadable(TimerState.self, key: stateKey, in: store)
-            let savedConfiguration = Self.decode(Configuration.self, key: configurationKey, from: store) ?? Configuration()
-            let savedState = Self.decode(TimerState.self, key: stateKey, from: store) ?? TimerState()
+        if Self.migrateSavedRecords(in: store, versionKey: Self.schemaVersionKey) {
+            let configurationUnreadable = Self.isUnreadable(Configuration.self, key: Self.configurationKey, in: store)
+            let stateUnreadable = Self.isUnreadable(TimerState.self, key: Self.stateKey, in: store)
+            let savedConfiguration = Self.decode(Configuration.self, key: Self.configurationKey, from: store) ?? Configuration()
+            let savedState = Self.decode(TimerState.self, key: Self.stateKey, from: store) ?? TimerState()
             configuration = savedConfiguration.normalized
             state = savedState.repaired
             if configuration != savedConfiguration || configurationUnreadable {
@@ -167,16 +184,19 @@ final class TimerStore: ObservableObject {
 
         configuration = configuration.normalized
         persistConfiguration()
-        startPhase(.runningA, durationSeconds: configuration.durationASeconds)
+        startPhase(.runningA, durationSeconds: configuration.durationASeconds, cycleID: UUID())
     }
 
     func startBreak() {
         guard state.phase == .waitingForAConfirm else { return }
-        startPhase(.runningB, durationSeconds: configuration.durationBSeconds)
+        startPhase(.runningB, durationSeconds: configuration.durationBSeconds, cycleID: state.cycleID ?? UUID())
     }
 
-    func startBreakFromNotification() {
+    /// Starts Break from a Focus notification's action, only when the action belongs to the current
+    /// cycle. An action from an earlier cycle, without an ID, or repeated after Break started does nothing.
+    func startBreakFromNotification(cycleID: UUID?) {
         reconcileWithCurrentTime()
+        guard let cycleID, cycleID == state.cycleID else { return }
         startBreak()
     }
 
@@ -192,7 +212,7 @@ final class TimerStore: ObservableObject {
             state.remainingSeconds = nil
             state.paused = false
             persistState()
-            notifications.scheduleCompletion(for: state.phase, at: deadline, now: now)
+            notifications.scheduleCompletion(for: state.phase, at: deadline, now: now, cycleID: state.cycleID)
         } else {
             guard let deadline = state.endTimestamp else { return }
             let remaining = max(1, Int(ceil(deadline.timeIntervalSince(clock.now))))
@@ -224,20 +244,20 @@ final class TimerStore: ObservableObject {
         handlePhaseCompletion()
     }
 
-    private func startPhase(_ phase: Phase, durationSeconds: Int) {
+    private func startPhase(_ phase: Phase, durationSeconds: Int, cycleID: UUID) {
         let now = clock.now
         let deadline = now.addingTimeInterval(TimeInterval(durationSeconds))
-        state = TimerState(phase: phase, endTimestamp: deadline, paused: false, remainingSeconds: nil)
+        state = TimerState(phase: phase, endTimestamp: deadline, paused: false, remainingSeconds: nil, cycleID: cycleID)
         noticeMessage = nil
         persistState()
         updateDisplayedTime()
-        notifications.scheduleCompletion(for: phase, at: deadline, now: now)
+        notifications.scheduleCompletion(for: phase, at: deadline, now: now, cycleID: cycleID)
     }
 
     private func handlePhaseCompletion() {
         switch state.phase {
         case .runningA:
-            state = TimerState(phase: .waitingForAConfirm)
+            state = TimerState(phase: .waitingForAConfirm, cycleID: state.cycleID)
         case .runningB:
             state = TimerState()
         case .idle, .waitingForAConfirm:
@@ -279,27 +299,27 @@ final class TimerStore: ObservableObject {
         guard versionNeedsWrite else { return }
         versionNeedsWrite = false
         if let data = try? JSONEncoder().encode(configuration) {
-            store.setData(data, forKey: configurationKey)
+            store.setData(data, forKey: Self.configurationKey)
         }
         if let data = try? JSONEncoder().encode(state) {
-            store.setData(data, forKey: stateKey)
+            store.setData(data, forKey: Self.stateKey)
         }
         if let data = try? JSONEncoder().encode(Self.currentSchemaVersion) {
-            store.setData(data, forKey: schemaVersionKey)
+            store.setData(data, forKey: Self.schemaVersionKey)
         }
     }
 
     private func persistConfiguration() {
         claimUnsupportedVersion()
         if let data = try? JSONEncoder().encode(configuration) {
-            store.setData(data, forKey: configurationKey)
+            store.setData(data, forKey: Self.configurationKey)
         }
     }
 
     private func persistState() {
         claimUnsupportedVersion()
         if let data = try? JSONEncoder().encode(state) {
-            store.setData(data, forKey: stateKey)
+            store.setData(data, forKey: Self.stateKey)
         }
     }
 
