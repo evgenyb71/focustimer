@@ -1,10 +1,18 @@
 # Changelog
 
+## 2026-10-26
+
+- Give each Focus → Break cycle a saved cycle ID: it is created when Focus starts, kept while waiting for confirmation and during Break, and removed when Break completes or on Cancel. Completion notifications carry it, and the Focus notification's OK starts Break only when its ID matches the current cycle; an OK from an earlier cycle, without an ID, or repeated after Break started changes nothing.
+- Move saved data to schema version 2: a saved cycle in progress gets a cycle ID and keeps its timer, with no notice. Repair adds a missing ID to an active timer (with the correction notice) and removes one from idle.
+- Add 16 cycle tests. Record phase I10 as verified (80 tests on an iPhone 17 Pro simulator, iOS 26.5, with counts from the result bundle; user-reported Cmd+U and an upgrade check of version 1 data on the user's simulator), with the manual stale-alert check deferred as a ToDo, and update the iOS mission and tech stack.
+- Make the `start-phase` skill ask first which model should plan the phase, and stop so the user can switch models if they choose another.
+
 ## 2026-10-24
 
 - Recover unreadable saved records at launch: a `config` or `state` that is present but cannot be decoded (corrupt data, an unknown phase, wrong-typed values) is replaced with the default durations or an idle timer, the other record is kept, the status line shows "Saved timer data was corrected.", and pending completion alerts are cancelled for a replaced state. A missing record on a fresh install shows no notice.
 - Handle a newer, negative, or unreadable `schemaVersion`: launch still uses defaults in memory and writes nothing, now with the correction notice, and the first save afterwards writes both records and the current version, so the next launch reads them instead of ignoring them again.
 - Add 9 recovery tests. Record phase I09 as verified (64 tests on an iPhone 17 Pro simulator, iOS 26.5, with counts from the result bundle; user-reported Cmd+U and two seeded relaunch checks on the user's simulator) and update the iOS mission and tech stack.
+- Move I09 to the roadmap's completed table with its merge commit, and add a session handoff to the I09 phase spec (next phase I10 and its open questions, known issues, test baseline, environment, and how to seed simulator preferences through `simctl spawn … defaults write`).
 
 ## 2026-10-20
 
