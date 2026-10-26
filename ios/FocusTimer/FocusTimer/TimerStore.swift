@@ -185,8 +185,9 @@ final class TimerStore: ObservableObject {
 
         configuration = configuration.normalized
         persistConfiguration()
-        // A new cycle makes every delivered alert obsolete. No pending request exists while idle,
-        // and scheduling replaces one with the same identifier.
+        // A new cycle makes every earlier alert obsolete. Idle does not prove that no request is pending:
+        // launch can ignore an unsupported saved version while a Break request is still scheduled.
+        notifications.cancelAllPendingCompletions()
         notifications.removeAllDeliveredCompletions()
         startPhase(.runningA, durationSeconds: configuration.durationASeconds, cycleID: UUID())
     }
