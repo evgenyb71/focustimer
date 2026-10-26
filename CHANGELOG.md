@@ -6,6 +6,10 @@
 - Move saved data to schema version 2: a saved cycle in progress gets a cycle ID and keeps its timer, with no notice. Repair adds a missing ID to an active timer (with the correction notice) and removes one from idle.
 - Add 16 cycle tests. Record phase I10 as verified (80 tests on an iPhone 17 Pro simulator, iOS 26.5, with counts from the result bundle; user-reported Cmd+U and an upgrade check of version 1 data on the user's simulator), with the manual stale-alert check deferred as a ToDo, and update the iOS mission and tech stack.
 - Make the `start-phase` skill ask first which model should plan the phase, and stop so the user can switch models if they choose another.
+- Move I10 to the roadmap's completed table with its merge commit, and add a session handoff to the I10 phase spec (next phase I11 and its open questions, known issues, test baseline, environment, and deferred checks).
+- Remove notifications that no longer match the timer: starting Break removes the delivered Focus alert, Cancel and a new Focus remove all delivered alerts, Break completion cancels the pending Break request, and launch or returning to the app keeps the Focus alert only while waiting for Break and the Break alert only while Break runs.
+- Fix a crash when tapping a notification's OK: the notification delegate finished off the main thread, which UIKit rejects. The bug existed since the app was added and surfaced in the first real tap on an alert; the delegate now runs on the main actor.
+- Add 14 alert cleanup tests. Record phase I11 as verified (94 tests on an iPhone 17 Pro simulator, iOS 26.5, with counts from the result bundle; user-reported Cmd+U and a Notification Center check on the user's simulator after the crash fix), with the defect recorded in the I11 spec, and mark the I10 stale-alert ToDo as superseded by that check.
 
 ## 2026-10-24
 
