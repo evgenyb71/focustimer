@@ -10,6 +10,7 @@
 - Remove notifications that no longer match the timer: starting Break removes the delivered Focus alert, Cancel and a new Focus remove all delivered alerts, Break completion cancels the pending Break request, and launch or returning to the app keeps the Focus alert only while waiting for Break and the Break alert only while Break runs.
 - Fix a crash when tapping a notification's OK: the notification delegate finished off the main thread, which UIKit rejects. The bug existed since the app was added and surfaced in the first real tap on an alert; the delegate now runs on the main actor.
 - Add 14 alert cleanup tests. Record phase I11 as verified (94 tests on an iPhone 17 Pro simulator, iOS 26.5, with counts from the result bundle; user-reported Cmd+U and a Notification Center check on the user's simulator after the crash fix), with the defect recorded in the I11 spec, and mark the I10 stale-alert ToDo as superseded by that check.
+- Fix a review finding on I11: starting a new Focus now also cancels pending alerts, so a Break alert still scheduled when launch ignored an unsupported saved version can no longer go off during the new Focus. Add a regression test with a test scheduler that tracks pending requests, and record the Codex review and its resolution in the I11 spec (95 tests, 94 passed, 1 expected failure; user-reported Cmd+U).
 
 ## 2026-10-24
 
