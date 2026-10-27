@@ -61,7 +61,7 @@ struct SystemNotificationScheduler: NotificationScheduling {
             identifier = NotificationScheduler.breakIdentifier
             content.title = "Break Timer complete"
             content.body = "Sequence finished."
-        case .idle, .waitingForAConfirm:
+        case .idle, .waitingForAConfirm, .completed:
             return
         }
 
@@ -83,7 +83,7 @@ struct SystemNotificationScheduler: NotificationScheduling {
             UNUserNotificationCenter.current().removePendingNotificationRequests(
                 withIdentifiers: [NotificationScheduler.breakIdentifier]
             )
-        case .idle, .waitingForAConfirm:
+        case .idle, .waitingForAConfirm, .completed:
             break
         }
     }
@@ -104,7 +104,7 @@ struct SystemNotificationScheduler: NotificationScheduling {
             UNUserNotificationCenter.current().removeDeliveredNotifications(
                 withIdentifiers: [NotificationScheduler.breakIdentifier]
             )
-        case .idle, .waitingForAConfirm:
+        case .idle, .waitingForAConfirm, .completed:
             break
         }
     }
