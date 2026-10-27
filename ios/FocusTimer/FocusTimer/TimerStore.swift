@@ -25,6 +25,15 @@ final class TimerStore: ObservableObject {
             )
         }
 
+        /// The full length of a timed phase, or nil for idle and waiting.
+        func duration(of phase: Phase) -> Int? {
+            switch phase {
+            case .runningA: durationASeconds
+            case .runningB: durationBSeconds
+            case .idle, .waitingForAConfirm: nil
+            }
+        }
+
         private static func normalize(_ seconds: Int, to range: ClosedRange<Int>) -> Int {
             let wholeMinutes = (Double(seconds) / 60).rounded() * 60
             return Int(min(max(wholeMinutes, Double(range.lowerBound)), Double(range.upperBound)))
@@ -60,6 +69,15 @@ final class TimerStore: ObservableObject {
                 guard let endTimestamp else { return TimerState() }
                 return TimerState(phase: phase, endTimestamp: endTimestamp, paused: false, remainingSeconds: nil, cycleID: cycleID)
             }
+        }
+
+        /// A paused remaining time longer than the phase's full length is shortened to that length.
+        func clampingPausedTime(to configuration: Configuration) -> TimerState {
+            guard paused, let remainingSeconds, let duration = configuration.duration(of: phase),
+                  remainingSeconds > duration else { return self }
+            var state = self
+            state.remainingSeconds = duration
+            return state
         }
     }
 
@@ -115,8 +133,9 @@ final class TimerStore: ObservableObject {
             let stateUnreadable = Self.isUnreadable(TimerState.self, key: Self.stateKey, in: store)
             let savedConfiguration = Self.decode(Configuration.self, key: Self.configurationKey, from: store) ?? Configuration()
             let savedState = Self.decode(TimerState.self, key: Self.stateKey, from: store) ?? TimerState()
-            configuration = savedConfiguration.normalized
-            state = savedState.repaired
+            let normalizedConfiguration = savedConfiguration.normalized
+            configuration = normalizedConfiguration
+            state = savedState.repaired.clampingPausedTime(to: normalizedConfiguration)
             if configuration != savedConfiguration || configurationUnreadable {
                 persistConfiguration()
             }
@@ -220,7 +239,9 @@ final class TimerStore: ObservableObject {
             persistState()
             notifications.scheduleCompletion(for: state.phase, at: deadline, now: now, cycleID: state.cycleID)
         } else {
-            guard let deadline = state.endTimestamp else { return }
+            // At or after expiry the phase completes instead of pausing.
+            reconcileWithCurrentTime()
+            guard canPause, !state.paused, let deadline = state.endTimestamp else { return }
             let remaining = max(1, Int(ceil(deadline.timeIntervalSince(clock.now))))
             state.endTimestamp = nil
             state.remainingSeconds = remaining
@@ -250,12 +271,25 @@ final class TimerStore: ObservableObject {
     func reconcileWithCurrentTime() {
         guard !state.paused,
               state.phase == .runningA || state.phase == .runningB,
-              let deadline = state.endTimestamp,
-              deadline <= clock.now else {
+              let deadline = state.endTimestamp else {
             updateDisplayedTime()
             return
         }
-        handlePhaseCompletion()
+        let now = clock.now
+        if deadline <= now {
+            handlePhaseCompletion()
+            return
+        }
+        // After a backward clock jump the deadline can be further away than the phase is long;
+        // it is moved to now + the full length, so the timer never shows more than its length.
+        if let duration = configuration.normalized.duration(of: state.phase),
+           deadline.timeIntervalSince(now) > TimeInterval(duration) {
+            let capped = now.addingTimeInterval(TimeInterval(duration))
+            state.endTimestamp = capped
+            persistState()
+            notifications.scheduleCompletion(for: state.phase, at: capped, now: now, cycleID: state.cycleID)
+        }
+        updateDisplayedTime()
     }
 
     private func startPhase(_ phase: Phase, durationSeconds: Int, cycleID: UUID) {
