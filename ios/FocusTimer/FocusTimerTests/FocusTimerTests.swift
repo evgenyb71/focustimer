@@ -264,18 +264,19 @@ struct TimerStoreTransitionTests {
         #expect(notifications.pendingCalls.count == 2)
     }
 
-    @Test func breakExpiryReturnsToIdleKeepingConfiguration() {
+    @Test func breakExpiryCompletesTheCycleKeepingConfiguration() {
         let timer = makeRunning(.breakTime)
 
         clock.advance(by: TimeInterval(breakSeconds))
         timer.reconcileWithCurrentTime()
 
-        #expect(timer.state == TimerStore.TimerState())
+        // Since I13 a finished Break enters completed instead of idle.
+        #expect(timer.state.ignoringCycle == TimerStore.TimerState(phase: .completed))
         #expect(timer.configuration == TimerStore.Configuration(
             durationASeconds: focusSeconds,
             durationBSeconds: breakSeconds
         ))
-        #expect(savedState() == TimerStore.TimerState())
+        #expect(savedState() == timer.state)
     }
 
     // MARK: Pause and resume
@@ -395,7 +396,7 @@ struct TimerStoreTransitionTests {
         #expect(notifications.pendingCalls.count == 2)
     }
 
-    @Test func delayedBreakReconciliationOnlyReturnsToIdle() {
+    @Test func delayedBreakReconciliationOnlyCompletesTheCycle() {
         let timer = makeRunning(.breakTime)
         let callCount = notifications.pendingCalls.count
 
@@ -403,7 +404,7 @@ struct TimerStoreTransitionTests {
         timer.reconcileWithCurrentTime()
         timer.reconcileWithCurrentTime()
 
-        #expect(timer.state == TimerStore.TimerState())
+        #expect(timer.state.ignoringCycle == TimerStore.TimerState(phase: .completed))
         // Completion cancels the pending Break request once; the second reconcile does nothing.
         #expect(Array(notifications.pendingCalls.dropFirst(callCount)) == [.cancel(phase: .runningB)])
     }
@@ -446,15 +447,15 @@ extension TimerStoreTransitionTests {
         #expect(notifications.pendingCalls.count == 2)
     }
 
-    @Test func relaunchAfterBreakDeadlineReturnsToIdle() {
+    @Test func relaunchAfterBreakDeadlineCompletesTheCycle() {
         _ = makeRunning(.breakTime)
         clock.advance(by: TimeInterval(breakSeconds + 1_000))
 
         let relaunched = relaunch()
 
-        #expect(relaunched.state == TimerStore.TimerState())
+        #expect(relaunched.state.ignoringCycle == TimerStore.TimerState(phase: .completed))
         #expect(relaunched.configuration == savedDurations)
-        #expect(savedState() == TimerStore.TimerState())
+        #expect(savedState() == relaunched.state)
     }
 
     @Test(arguments: TimedPhase.allCases)
@@ -712,7 +713,7 @@ struct TimerStoreInvariantTests {
 
         let expected = timed == .focus
             ? TimerStore.TimerState(phase: .waitingForAConfirm)
-            : TimerStore.TimerState()
+            : TimerStore.TimerState(phase: .completed)
         #expect(timer.state.ignoringCycle == expected)
         #expect(savedState()?.ignoringCycle == expected)
         #expect(notifications.pendingCalls == [.cancelAll])
@@ -934,7 +935,7 @@ struct TimerStoreMigrationTests {
 
         let (timer, _) = load()
 
-        let expected = timed == .focus ? TimerStore.TimerState(phase: .waitingForAConfirm) : TimerStore.TimerState()
+        let expected = timed == .focus ? TimerStore.TimerState(phase: .waitingForAConfirm) : TimerStore.TimerState(phase: .completed)
         #expect(timer.state.ignoringCycle == expected)
         #expect(timer.configuration == savedConfiguration)
         #expect(savedVersion() == TimerStore.currentSchemaVersion)
@@ -1135,7 +1136,7 @@ struct TimerStoreRecoveryTests {
     // MARK: Unknown or wrong-typed values
 
     @Test func unknownPhaseFallsBackWholeRecordAndKeepsConfiguration() {
-        seed(config: encoded(savedConfiguration), state: Data(#"{"phase":"completed","paused":false}"#.utf8))
+        seed(config: encoded(savedConfiguration), state: Data(#"{"phase":"finished","paused":false}"#.utf8))
 
         let (timer, _) = load()
 
@@ -1223,8 +1224,9 @@ struct TimerStoreCycleTests {
 
         clock.advance(by: 60)
         timer.reconcileWithCurrentTime()
-        #expect(timer.state == TimerStore.TimerState())
-        #expect(savedState() == TimerStore.TimerState())
+        // The completed cycle keeps its ID (I13); only Cancel or a new Focus ends it.
+        #expect(timer.state == TimerStore.TimerState(phase: .completed, cycleID: cycleID))
+        #expect(savedState() == timer.state)
     }
 
     @Test func pauseAndResumeKeepTheCycleID() {
@@ -1372,7 +1374,7 @@ struct TimerStoreCycleTests {
         #expect(timer.state.ignoringCycle == state)
         #expect(timer.state.cycleID != nil)
         #expect(savedState() == timer.state)
-        #expect(store.values["schemaVersion"] == (try? JSONEncoder().encode(2)))
+        #expect(store.values["schemaVersion"] == (try? JSONEncoder().encode(TimerStore.currentSchemaVersion)))
         #expect(timer.statusMessage != TimerStore.repairNotice)
         #expect(notifications.pendingCalls.isEmpty)
     }
@@ -1547,7 +1549,7 @@ struct TimerStoreAlertCleanupTests {
 
         timer.reconcileWithCurrentTime()
 
-        #expect(timer.state == TimerStore.TimerState())
+        #expect(timer.state.phase == .completed)
         #expect(Array(notifications.calls.dropFirst(mark)) == [.cancel(phase: .runningB)])
     }
 
@@ -1640,7 +1642,7 @@ struct TimerStoreAlertCleanupTests {
         #expect(Array(notifications.calls.dropFirst(mark)) == expectedCleanup(phase))
     }
 
-    @Test func activationAfterBreakEndedInTheBackgroundRemovesTheBreakAlert() {
+    @Test func activationAfterBreakEndedInTheBackgroundKeepsTheBreakAlert() {
         let timer = makeWaitingForBreak()
         timer.startBreak()
         clock.advance(by: 600)
@@ -1648,11 +1650,11 @@ struct TimerStoreAlertCleanupTests {
 
         timer.activate()
 
-        #expect(timer.state == TimerStore.TimerState())
+        // Since I13 the Break alert is the current alert while completed.
+        #expect(timer.state.phase == .completed)
         #expect(Array(notifications.calls.dropFirst(mark)) == [
             .cancel(phase: .runningB),
             .removeDelivered(phase: .runningA),
-            .removeDelivered(phase: .runningB),
         ])
     }
 
@@ -1719,7 +1721,7 @@ struct TimerStoreClockEdgeTests {
     }
 
     func completed(_ phase: ClockJumpPhase) -> TimerStore.TimerState {
-        phase == .focus ? TimerStore.TimerState(phase: .waitingForAConfirm) : TimerStore.TimerState()
+        phase == .focus ? TimerStore.TimerState(phase: .waitingForAConfirm) : TimerStore.TimerState(phase: .completed)
     }
 
     func savedState() -> TimerStore.TimerState? {
@@ -1876,7 +1878,7 @@ struct TimerStoreClockEdgeTests {
 
         let expected = phase == .focus
             ? TimerStore.TimerState(phase: .waitingForAConfirm, cycleID: cycleID)
-            : TimerStore.TimerState()
+            : TimerStore.TimerState(phase: .completed, cycleID: cycleID)
         #expect(timer.state == expected)
         #expect(savedState() == expected)
         #expect(timer.displayedSeconds == (phase == .focus ? 0 : nil))
@@ -1918,13 +1920,13 @@ struct TimerStoreClockEdgeTests {
         #expect(notifications.scheduledCycleIDs.count == 1)
     }
 
-    @Test func forwardJumpPastBreakReturnsToIdle() {
+    @Test func forwardJumpPastBreakCompletesTheCycle() {
         let timer = makeRunning(.breakTime)
         clock.advance(by: 86_400)
 
         timer.reconcileWithCurrentTime()
 
-        #expect(timer.state == TimerStore.TimerState())
+        #expect(timer.state.ignoringCycle == TimerStore.TimerState(phase: .completed))
     }
 
     // MARK: Duplicate callbacks and delayed activation
@@ -2017,7 +2019,7 @@ struct TimerStoreEndStateTests {
     @Test func breakEndShowsAfterBreakCompletes() {
         let timer = makeBreakFinished()
 
-        #expect(timer.state == TimerStore.TimerState())
+        #expect(timer.state.phase == .completed)
         #expect(timer.endState == .breakComplete)
         #expect(timer.endHeadline == "Cycle complete")
         #expect(timer.statusMessage == "Start another Focus when you're ready.")
@@ -2041,7 +2043,7 @@ struct TimerStoreEndStateTests {
 
         let relaunched = makeTimer()
 
-        #expect(relaunched.state == TimerStore.TimerState())
+        #expect(relaunched.state.phase == .completed)
         #expect(relaunched.endState == .breakComplete)
     }
 
@@ -2057,7 +2059,7 @@ struct TimerStoreEndStateTests {
         #expect(timer.statusMessage == TimerStore.repairNotice)
     }
 
-    // MARK: Flag lifetime
+    // MARK: Leaving the Break end (completed since I13)
 
     @Test func startClearsTheBreakEnd() {
         let timer = makeBreakFinished()
@@ -2066,7 +2068,6 @@ struct TimerStoreEndStateTests {
 
         #expect(timer.state.phase == .runningA)
         #expect(timer.endState == nil)
-        #expect(!timer.breakJustFinished)
     }
 
     @Test func cancelClearsTheBreakEnd() {
@@ -2077,34 +2078,259 @@ struct TimerStoreEndStateTests {
         #expect(timer.endState == nil)
     }
 
-    @Test func durationEditClearsTheBreakEnd() {
+    @Test func durationEditKeepsTheBreakEnd() {
         let timer = makeBreakFinished()
 
         timer.configuration.durationASeconds = 120
 
-        #expect(timer.endState == nil)
-        #expect(timer.primaryButtonTitle == "Start")
+        #expect(timer.state.phase == .completed)
+        #expect(timer.endState == .breakComplete)
+        #expect(timer.primaryButtonTitle == "Start Focus")
     }
 
-    @Test func relaunchAfterTheBreakEndShowsTheNormalIdleScreen() {
+    @Test func relaunchKeepsTheBreakEnd() {
         _ = makeBreakFinished()
 
         let relaunched = makeTimer()
 
-        #expect(relaunched.endState == nil)
-        #expect(relaunched.statusMessage == "Set durations and press Start.")
+        #expect(relaunched.endState == .breakComplete)
+        #expect(relaunched.statusMessage == "Start another Focus when you're ready.")
+    }
+}
+
+@MainActor
+struct TimerStoreCompletedStateTests {
+    let clock = FakeClock()
+    let store = InMemoryStore()
+    let notifications = RecordingNotificationScheduler()
+
+    func makeTimer() -> TimerStore {
+        TimerStore(clock: clock, store: store, notifications: notifications)
     }
 
-    @Test func theFlagIsNeverSaved() {
-        let timer = makeWaitingForBreak()
+    func makeBreakRunning() -> TimerStore {
+        let timer = makeTimer()
+        timer.startFocus()
+        clock.advance(by: 60)
+        timer.reconcileWithCurrentTime()
         timer.startBreak()
-        let keysBefore = Set(store.values.keys)
+        return timer
+    }
+
+    func makeCompleted() -> TimerStore {
+        let timer = makeBreakRunning()
+        clock.advance(by: 60)
+        timer.reconcileWithCurrentTime()
+        return timer
+    }
+
+    func savedState() -> TimerStore.TimerState? {
+        store.values["state"].flatMap { try? JSONDecoder().decode(TimerStore.TimerState.self, from: $0) }
+    }
+
+    func seed(state: Data, version: Int = TimerStore.currentSchemaVersion) {
+        store.setData(state, forKey: "state")
+        if let data = try? JSONEncoder().encode(version) {
+            store.setData(data, forKey: "schemaVersion")
+        }
+    }
+
+    func encoded(_ state: TimerStore.TimerState) -> Data {
+        (try? JSONEncoder().encode(state)) ?? Data()
+    }
+
+    // MARK: Entering completed
+
+    @Test func breakExpiryEntersCompletedWithTheCycleID() {
+        let timer = makeBreakRunning()
+        let cycleID = timer.state.cycleID
         clock.advance(by: 60)
 
         timer.reconcileWithCurrentTime()
 
-        #expect(timer.breakJustFinished)
-        #expect(Set(store.values.keys) == keysBefore)
-        #expect(store.values["state"].flatMap { try? JSONDecoder().decode(TimerStore.TimerState.self, from: $0) } == TimerStore.TimerState())
+        let completed = TimerStore.TimerState(phase: .completed, cycleID: cycleID)
+        #expect(timer.state == completed)
+        #expect(savedState() == completed)
+        #expect(timer.displayedSeconds == nil)
+        #expect(timer.endState == .breakComplete)
+    }
+
+    @Test func completedIsEnteredOnce() {
+        let timer = makeCompleted()
+        let completed = timer.state
+        let writes = store.writtenKeys.count
+        let calls = notifications.calls.count
+
+        clock.advance(by: 3_600)
+        timer.reconcileWithCurrentTime()
+        timer.reconcileWithCurrentTime()
+
+        #expect(timer.state == completed)
+        #expect(store.writtenKeys.count == writes)
+        #expect(notifications.calls.count == calls)
+    }
+
+    @Test func activationAndLaunchEnterCompletedAfterAFinishedBreak() {
+        let timer = makeBreakRunning()
+        let cycleID = timer.state.cycleID
+        clock.advance(by: 86_400)
+
+        let relaunched = makeTimer()
+
+        #expect(relaunched.state == TimerStore.TimerState(phase: .completed, cycleID: cycleID))
+
+        let other = makeBreakRunning()
+        clock.advance(by: 86_400)
+        other.activate()
+        #expect(other.state.phase == .completed)
+    }
+
+    @Test func pausedBreakWithoutTimeLeftIsRepairedToCompleted() {
+        seed(state: encoded(TimerStore.TimerState(phase: .runningB, paused: true, remainingSeconds: 0, cycleID: UUID())))
+
+        let timer = makeTimer()
+
+        #expect(timer.state.phase == .completed)
+        #expect(timer.statusMessage == TimerStore.repairNotice)
+    }
+
+    // MARK: Relaunch and repair
+
+    @Test func relaunchRestoresCompletedWithoutNotice() {
+        _ = makeCompleted()
+        let saved = store.values
+
+        let relaunched = makeTimer()
+
+        #expect(relaunched.state.phase == .completed)
+        #expect(relaunched.state.endTimestamp == nil)
+        #expect(relaunched.state.cycleID != nil)
+        #expect(relaunched.endState == .breakComplete)
+        #expect(relaunched.statusMessage != TimerStore.repairNotice)
+        #expect(store.values == saved)
+    }
+
+    @Test func completedWithStrayTimingFieldsIsRepaired() {
+        let cycleID = UUID()
+        seed(state: encoded(TimerStore.TimerState(phase: .completed, endTimestamp: clock.now.addingTimeInterval(30), paused: true, remainingSeconds: 10, cycleID: cycleID)))
+
+        let timer = makeTimer()
+
+        #expect(timer.state == TimerStore.TimerState(phase: .completed, cycleID: cycleID))
+        #expect(savedState() == timer.state)
+        #expect(timer.statusMessage == TimerStore.repairNotice)
+    }
+
+    @Test func completedWithoutACycleIDGetsOne() {
+        seed(state: encoded(TimerStore.TimerState(phase: .completed)))
+
+        let timer = makeTimer()
+
+        #expect(timer.state.phase == .completed)
+        #expect(timer.state.cycleID != nil)
+        #expect(savedState() == timer.state)
+        #expect(timer.statusMessage == TimerStore.repairNotice)
+    }
+
+    // MARK: Schema version 3
+
+    @Test func version2RecordsMigrateToVersion3Unchanged() {
+        let state = encoded(TimerStore.TimerState(phase: .waitingForAConfirm, cycleID: UUID()))
+        seed(state: state, version: 2)
+        let mark = store.writtenKeys.count
+
+        let timer = makeTimer()
+
+        #expect(timer.state.phase == .waitingForAConfirm)
+        #expect(store.values["state"] == state)
+        #expect(Array(store.writtenKeys.dropFirst(mark)) == ["schemaVersion"])
+        #expect(store.values["schemaVersion"] == (try? JSONEncoder().encode(3)))
+        #expect(timer.statusMessage != TimerStore.repairNotice)
+    }
+
+    @Test func version2IdleStaysIdle() {
+        seed(state: encoded(TimerStore.TimerState()), version: 2)
+
+        let timer = makeTimer()
+
+        #expect(timer.state == TimerStore.TimerState())
+        #expect(timer.endState == nil)
+    }
+
+    // MARK: Leaving completed
+
+    @Test func startFocusFromCompletedStartsANewCycle() {
+        let timer = makeCompleted()
+        let oldCycle = timer.state.cycleID
+        let mark = notifications.calls.count
+
+        timer.startOrConfirmBreak()
+
+        #expect(timer.state.phase == .runningA)
+        #expect(timer.state.cycleID != nil)
+        #expect(timer.state.cycleID != oldCycle)
+        #expect(Array(notifications.calls.dropFirst(mark)).prefix(2) == [.cancelAll, .removeAllDelivered])
+    }
+
+    @Test func cancelFromCompletedReturnsToIdleAndRemovesAlerts() {
+        let timer = makeCompleted()
+        let mark = notifications.calls.count
+
+        timer.cancel()
+
+        #expect(timer.state == TimerStore.TimerState())
+        #expect(savedState() == TimerStore.TimerState())
+        #expect(Array(notifications.calls.dropFirst(mark)) == [.cancelAll, .removeAllDelivered])
+    }
+
+    @Test func durationsCanBeEditedInCompletedAndStartUsesThem() {
+        let timer = makeCompleted()
+        #expect(timer.canEditDurations)
+        #expect(timer.canStart)
+        #expect(!timer.canPause)
+
+        timer.configuration = TimerStore.Configuration(durationASeconds: 300, durationBSeconds: 120)
+        #expect(timer.state.phase == .completed)
+
+        let start = clock.now
+        timer.startFocus()
+        #expect(timer.state.endTimestamp == start.addingTimeInterval(300))
+    }
+
+    @Test func pauseAndTheFocusActionDoNothingInCompleted() {
+        let timer = makeCompleted()
+        let completed = timer.state
+        let mark = notifications.calls.count
+
+        timer.pauseOrResume()
+        timer.startBreakFromNotification(cycleID: completed.cycleID)
+
+        #expect(timer.state == completed)
+        #expect(notifications.calls.count == mark)
+    }
+
+    // MARK: Alerts
+
+    @Test func breakCompletionCancelsOnlyThePendingBreakRequest() {
+        let timer = makeBreakRunning()
+        let mark = notifications.calls.count
+        clock.advance(by: 60)
+
+        timer.reconcileWithCurrentTime()
+
+        #expect(Array(notifications.calls.dropFirst(mark)) == [.cancel(phase: .runningB)])
+    }
+
+    @Test func activationAndLaunchInCompletedKeepTheBreakAlert() {
+        let timer = makeCompleted()
+        let mark = notifications.calls.count
+
+        timer.activate()
+        _ = makeTimer()
+
+        #expect(Array(notifications.calls.dropFirst(mark)) == [
+            .removeDelivered(phase: .runningA),
+            .removeDelivered(phase: .runningA),
+        ])
     }
 }

@@ -50,6 +50,7 @@ Asked during the I13 planning that was paused for this phase; record them in the
 - Saved data moves to schema version 3 with a no-op 2 → 3 step, so builds before I13 treat data that may contain "completed" as a newer version (I09) instead of failing to decode it.
 - The delivered Break alert stays while the app is completed (it is the current alert), and is removed when the user leaves completed. This changes the I11 activation rule for that state.
 - The I13 scope question (how to leave completed before I14 and I15) is still open.
+- Update (2026-10-27): all of the above is recorded and implemented in [I13](I13-completed-state.md), which also replaced the transient `breakJustFinished` flag with the saved completed phase.
 
 ### Non-goals
 

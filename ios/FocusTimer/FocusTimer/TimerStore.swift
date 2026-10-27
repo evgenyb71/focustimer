@@ -8,6 +8,8 @@ final class TimerStore: ObservableObject {
         case runningA
         case waitingForAConfirm
         case runningB
+        /// Break has ended; the cycle is finished until the user starts a new Focus or cancels.
+        case completed
     }
 
     struct Configuration: Codable, Equatable {
@@ -30,7 +32,7 @@ final class TimerStore: ObservableObject {
             switch phase {
             case .runningA: durationASeconds
             case .runningB: durationBSeconds
-            case .idle, .waitingForAConfirm: nil
+            case .idle, .waitingForAConfirm, .completed: nil
             }
         }
 
@@ -50,19 +52,19 @@ final class TimerStore: ObservableObject {
 
         /// Fields that do not belong to the phase are removed. A running phase without a
         /// deadline falls back to idle; a paused phase without positive remaining time is
-        /// treated as expired, so Focus waits for Break confirmation and Break returns to idle.
-        /// An active phase without a cycle ID gets a new one.
+        /// treated as expired, so Focus waits for Break confirmation and Break is completed.
+        /// Every phase except idle gets a new cycle ID if it has none.
         var repaired: TimerState {
             let cycleID = cycleID ?? UUID()
             switch phase {
             case .idle:
                 return TimerState()
-            case .waitingForAConfirm:
+            case .waitingForAConfirm, .completed:
                 return TimerState(phase: phase, cycleID: cycleID)
             case .runningA, .runningB:
                 if paused {
                     guard let remainingSeconds, remainingSeconds > 0 else {
-                        return phase == .runningA ? TimerState(phase: .waitingForAConfirm, cycleID: cycleID) : TimerState()
+                        return TimerState(phase: phase == .runningA ? .waitingForAConfirm : .completed, cycleID: cycleID)
                     }
                     return TimerState(phase: phase, endTimestamp: nil, paused: true, remainingSeconds: remainingSeconds, cycleID: cycleID)
                 }
@@ -90,7 +92,7 @@ final class TimerStore: ObservableObject {
     static let repairNotice = "Saved timer data was corrected."
 
     /// Version of the saved `config` and `state` format. Records saved before versioning are version 0.
-    nonisolated static let currentSchemaVersion = 2
+    nonisolated static let currentSchemaVersion = 3
 
     /// Steps that update saved records by one version, in order: the step at index n migrates version n to n + 1.
     private static let migrations: [@MainActor (any KeyValueStore) -> Void] = [
@@ -107,20 +109,17 @@ final class TimerStore: ObservableObject {
                 store.setData(data, forKey: TimerStore.stateKey)
             }
         },
+        // 2 → 3: adds the `completed` phase. No record changes; the new version makes builds that predate it
+        // treat such data as a newer version instead of failing to decode the state.
+        { _ in },
     ]
 
     static let shared = TimerStore()
 
-    @Published var configuration: Configuration {
-        // Editing a duration starts preparing the next cycle, so the Break-end screen gives way.
-        didSet { breakJustFinished = false }
-    }
+    @Published var configuration: Configuration
     @Published private(set) var state: TimerState
     @Published private(set) var displayedSeconds: Int?
     @Published private(set) var noticeMessage: String?
-    /// Set when Break completes and cleared by the next action. Presentation only and never saved;
-    /// I13 replaces it with a durable completed state.
-    @Published private(set) var breakJustFinished = false
 
     private static let configurationKey = "config"
     private static let stateKey = "state"
@@ -176,15 +175,15 @@ final class TimerStore: ObservableObject {
         startTicker()
     }
 
-    var canEditDurations: Bool { state.phase == .idle }
-    var canStart: Bool { state.phase == .idle || state.phase == .waitingForAConfirm }
+    var canEditDurations: Bool { state.phase == .idle || state.phase == .completed }
+    var canStart: Bool { state.phase == .idle || state.phase == .waitingForAConfirm || state.phase == .completed }
     var canPause: Bool { state.phase == .runningA || state.phase == .runningB }
 
     var endState: EndState? {
         switch state.phase {
         case .waitingForAConfirm: .focusComplete
-        case .idle: breakJustFinished ? .breakComplete : nil
-        case .runningA, .runningB: nil
+        case .completed: .breakComplete
+        case .idle, .runningA, .runningB: nil
         }
     }
 
@@ -200,6 +199,7 @@ final class TimerStore: ObservableObject {
     var statusTitle: String {
         switch state.phase {
         case .idle: "Ready"
+        case .completed: "Cycle complete"
         case .runningA: state.paused ? "Focus paused" : "Focus Timer running"
         case .waitingForAConfirm: "Focus Timer complete"
         case .runningB: state.paused ? "Break paused" : "Break Timer running"
@@ -209,7 +209,8 @@ final class TimerStore: ObservableObject {
     var statusMessage: String {
         if let noticeMessage { return noticeMessage }
         return switch state.phase {
-        case .idle: breakJustFinished ? "Start another Focus when you're ready." : "Set durations and press Start."
+        case .idle: "Set durations and press Start."
+        case .completed: "Start another Focus when you're ready."
         case .runningA: state.paused ? "Resume to continue Focus." : "Break Timer will wait for confirmation."
         case .waitingForAConfirm: "Take a break when you're ready."
         case .runningB: state.paused ? "Resume to continue Break." : "Waiting for completion."
@@ -234,8 +235,7 @@ final class TimerStore: ObservableObject {
     }
 
     func startFocus() {
-        guard state.phase == .idle else { return }
-        breakJustFinished = false
+        guard state.phase == .idle || state.phase == .completed else { return }
 
         configuration = configuration.normalized
         persistConfiguration()
@@ -288,7 +288,6 @@ final class TimerStore: ObservableObject {
     }
 
     func cancel() {
-        breakJustFinished = false
         state = TimerState()
         noticeMessage = nil
         notifications.cancelAllPendingCompletions()
@@ -343,11 +342,10 @@ final class TimerStore: ObservableObject {
         case .runningA:
             state = TimerState(phase: .waitingForAConfirm, cycleID: state.cycleID)
         case .runningB:
-            state = TimerState()
-            breakJustFinished = true
-            // A delivered Break alert stays until the next activation, so an on-screen banner does not vanish at once.
+            state = TimerState(phase: .completed, cycleID: state.cycleID)
+            // The delivered Break alert is the current alert while completed; leaving completed removes it.
             notifications.cancelPendingCompletion(for: .runningB)
-        case .idle, .waitingForAConfirm:
+        case .idle, .waitingForAConfirm, .completed:
             return
         }
         persistState()
@@ -355,12 +353,13 @@ final class TimerStore: ObservableObject {
     }
 
     /// Keeps the delivered Focus alert only while Break waits for confirmation, and the Break alert only while
-    /// Break runs. Uses the phase alone, so it also clears alerts from before cycle IDs or a recovery reset.
+    /// Break runs or the cycle is completed. Uses the phase alone, so it also clears alerts from before cycle IDs
+    /// or a recovery reset.
     private func removeObsoleteDeliveredCompletions() {
         if state.phase != .waitingForAConfirm {
             notifications.removeDeliveredCompletion(for: .runningA)
         }
-        if state.phase != .runningB {
+        if state.phase != .runningB && state.phase != .completed {
             notifications.removeDeliveredCompletion(for: .runningB)
         }
     }
