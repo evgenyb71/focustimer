@@ -81,6 +81,12 @@ final class TimerStore: ObservableObject {
         }
     }
 
+    /// How the status card presents the end of a phase.
+    enum EndState: Equatable {
+        case focusComplete
+        case breakComplete
+    }
+
     static let repairNotice = "Saved timer data was corrected."
 
     /// Version of the saved `config` and `state` format. Records saved before versioning are version 0.
@@ -105,10 +111,16 @@ final class TimerStore: ObservableObject {
 
     static let shared = TimerStore()
 
-    @Published var configuration: Configuration
+    @Published var configuration: Configuration {
+        // Editing a duration starts preparing the next cycle, so the Break-end screen gives way.
+        didSet { breakJustFinished = false }
+    }
     @Published private(set) var state: TimerState
     @Published private(set) var displayedSeconds: Int?
     @Published private(set) var noticeMessage: String?
+    /// Set when Break completes and cleared by the next action. Presentation only and never saved;
+    /// I13 replaces it with a durable completed state.
+    @Published private(set) var breakJustFinished = false
 
     private static let configurationKey = "config"
     private static let stateKey = "state"
@@ -168,6 +180,23 @@ final class TimerStore: ObservableObject {
     var canStart: Bool { state.phase == .idle || state.phase == .waitingForAConfirm }
     var canPause: Bool { state.phase == .runningA || state.phase == .runningB }
 
+    var endState: EndState? {
+        switch state.phase {
+        case .waitingForAConfirm: .focusComplete
+        case .idle: breakJustFinished ? .breakComplete : nil
+        case .runningA, .runningB: nil
+        }
+    }
+
+    /// The headline shown instead of the time at the end of a phase.
+    var endHeadline: String? {
+        switch endState {
+        case .focusComplete: "Focus complete"
+        case .breakComplete: "Cycle complete"
+        case nil: nil
+        }
+    }
+
     var statusTitle: String {
         switch state.phase {
         case .idle: "Ready"
@@ -180,15 +209,19 @@ final class TimerStore: ObservableObject {
     var statusMessage: String {
         if let noticeMessage { return noticeMessage }
         return switch state.phase {
-        case .idle: "Set durations and press Start."
+        case .idle: breakJustFinished ? "Start another Focus when you're ready." : "Set durations and press Start."
         case .runningA: state.paused ? "Resume to continue Focus." : "Break Timer will wait for confirmation."
-        case .waitingForAConfirm: "Press Start Break to begin."
+        case .waitingForAConfirm: "Take a break when you're ready."
         case .runningB: state.paused ? "Resume to continue Break." : "Waiting for completion."
         }
     }
 
     var primaryButtonTitle: String {
-        state.phase == .waitingForAConfirm ? "Start Break" : "Start"
+        switch endState {
+        case .focusComplete: "Start Break"
+        case .breakComplete: "Start Focus"
+        case nil: "Start"
+        }
     }
 
     func startOrConfirmBreak() {
@@ -202,6 +235,7 @@ final class TimerStore: ObservableObject {
 
     func startFocus() {
         guard state.phase == .idle else { return }
+        breakJustFinished = false
 
         configuration = configuration.normalized
         persistConfiguration()
@@ -254,6 +288,7 @@ final class TimerStore: ObservableObject {
     }
 
     func cancel() {
+        breakJustFinished = false
         state = TimerState()
         noticeMessage = nil
         notifications.cancelAllPendingCompletions()
@@ -309,6 +344,7 @@ final class TimerStore: ObservableObject {
             state = TimerState(phase: .waitingForAConfirm, cycleID: state.cycleID)
         case .runningB:
             state = TimerState()
+            breakJustFinished = true
             // A delivered Break alert stays until the next activation, so an on-screen banner does not vanish at once.
             notifications.cancelPendingCompletion(for: .runningB)
         case .idle, .waitingForAConfirm:
