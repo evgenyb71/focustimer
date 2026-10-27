@@ -21,7 +21,7 @@ struct ContentView: View {
                         timer.startOrConfirmBreak()
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(Color(red: 0.16, green: 0.44, blue: 0.42))
+                    .tint(timer.endState?.accent ?? Color(red: 0.16, green: 0.44, blue: 0.42))
                     .controlSize(.large)
                     .frame(maxWidth: .infinity)
                     .disabled(!timer.canStart)
@@ -80,6 +80,8 @@ struct ContentView: View {
             RoundedRectangle(cornerRadius: 16)
                 .stroke(.brown.opacity(0.18))
         }
+        // Quieter while Focus waits for Break confirmation, so the next action stands out.
+        .opacity(timer.endState == .focusComplete ? 0.6 : 1)
     }
 
     private func durationRow(
@@ -101,32 +103,74 @@ struct ContentView: View {
 
     private var statusPanel: some View {
         VStack(spacing: 10) {
-            Text(timer.statusTitle.uppercased())
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-            Text(formattedTime)
-                .font(.system(size: 48, weight: .semibold, design: .rounded))
-                .monospacedDigit()
-                .contentTransition(.numericText())
-            Text(timer.statusMessage)
-                .font(.subheadline)
-                .foregroundStyle(Color(red: 0.12, green: 0.33, blue: 0.31))
-                .multilineTextAlignment(.center)
-                .frame(minHeight: 20)
+            if let endState = timer.endState, let headline = timer.endHeadline {
+                Image(systemName: endState.symbolName)
+                    .font(.system(size: 56))
+                    .foregroundStyle(endState.accent)
+                    .accessibilityHidden(true)
+                VStack(spacing: 6) {
+                    Text(headline)
+                        .font(.title.bold())
+                    statusMessageText
+                }
+                .accessibilityElement(children: .combine)
+            } else {
+                Text(timer.statusTitle.uppercased())
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Text(formattedTime)
+                    .font(.system(size: 48, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
+                statusMessageText
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 24)
         .padding(.horizontal)
-        .background(.white.opacity(0.62), in: RoundedRectangle(cornerRadius: 16))
+        .background {
+            RoundedRectangle(cornerRadius: 16)
+                .fill(.white.opacity(0.62))
+                .overlay {
+                    if let accent = timer.endState?.accent {
+                        RoundedRectangle(cornerRadius: 16).fill(accent.opacity(0.12))
+                    }
+                }
+        }
         .overlay {
             RoundedRectangle(cornerRadius: 16)
-                .stroke(.brown.opacity(0.18))
+                .stroke(timer.endState?.accent.opacity(0.5) ?? .brown.opacity(0.18), lineWidth: timer.endState == nil ? 1 : 2)
         }
+    }
+
+    private var statusMessageText: some View {
+        Text(timer.statusMessage)
+            .font(.subheadline)
+            .foregroundStyle(Color(red: 0.12, green: 0.33, blue: 0.31))
+            .multilineTextAlignment(.center)
+            .frame(minHeight: 20)
     }
 
     private var formattedTime: String {
         guard let total = timer.displayedSeconds else { return "--:--" }
         return String(format: "%02d:%02d", total / 60, total % 60)
+    }
+}
+
+private extension TimerStore.EndState {
+    var symbolName: String {
+        switch self {
+        case .focusComplete: "cup.and.saucer.fill"
+        case .breakComplete: "checkmark.circle.fill"
+        }
+    }
+
+    /// Dark enough for white button text at WCAG AA (contrast about 4.9 for amber and 5.3 for green).
+    var accent: Color {
+        switch self {
+        case .focusComplete: Color(red: 0.66, green: 0.37, blue: 0.06)
+        case .breakComplete: Color(red: 0.18, green: 0.48, blue: 0.27)
+        }
     }
 }
 

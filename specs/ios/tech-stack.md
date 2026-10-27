@@ -23,7 +23,7 @@ Status: baseline and accepted constraints as of 2026-10-16; updated 2026-10-24 f
 - `NotificationScheduler.swift`: notification identifiers, category setup, and authorization (`NotificationScheduler`); the `NotificationScheduling` protocol and its `SystemNotificationScheduler` implementation for scheduling and cancelling completions.
 - `ios/FocusTimer/FocusTimerTests/`: Swift Testing unit tests (`FocusTimerTests.swift`) and test doubles (`TestDoubles.swift`).
 - `FocusTimerApp.swift`: application entry, scene lifecycle, notification response delegation.
-- `ContentView.swift`: durations, status, and controls; `Assets.xcassets`: color/icon slots.
+- `ContentView.swift`: durations, status, and controls, including the end-state presentation driven by `TimerStore.endState` (since I24); `Assets.xcassets`: color/icon slots.
 
 ## Gaps that guide future design
 
