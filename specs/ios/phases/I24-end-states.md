@@ -1,6 +1,6 @@
 # I24 Design Focus-end and Break-end states
 
-Status: verified (2026-10-27): 121 test functions, all passed, 0 expected failures, agent-run on iPhone 17 Pro iOS 26.5, with agent screenshots of both ends; user-reported Cmd+U as expected and a full cycle on the iPhone 18 Pro Max (iOS 27.0) with both end screens as expected. The user confirmed the screens by sight and did not send screenshots; the exit check's screenshots are the agent's. Implements roadmap phase I24, "Design Focus-end and Break-end states", scheduled before I13. Branch `feat/I24-end-states`.
+Status: verified (2026-10-27): 121 test functions, all passed, 0 expected failures, agent-run on iPhone 17 Pro iOS 26.5, with agent screenshots of both ends; user-reported Cmd+U as expected and a full cycle on the iPhone 18 Pro Max (iOS 27.0) with both end screens as expected. The user confirmed the screens by sight and did not send screenshots; the exit check's screenshots are the agent's. Implements roadmap phase I24, "Design Focus-end and Break-end states", scheduled before I13. Commit `58cd74b` (changelog `92178eb`) on branch `feat/I24-end-states`; Codex review approved (as reported by the user, 2026-10-27); merged to `main` as `a660f4b` and pushed.
 
 Context: [roadmap](../roadmap.md), [mission](../mission.md), [tech stack](../tech-stack.md), previous phase [I12](I12-expiry-clock-edges.md).
 
