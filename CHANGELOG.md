@@ -5,6 +5,7 @@
 - Complete a phase when it is paused at or after its deadline, instead of pausing it with one second left: Focus waits for Break confirmation and Break returns to idle. This fixes the known issue owned by I12.
 - Handle clock changes: after a backward clock jump, a running timer whose deadline is more than the phase's length away is moved to now plus that length, saved, and its alert rescheduled, with no notice. At launch, a saved paused time longer than the phase is clamped with the correction notice. A forward jump completes the phase on the next check and never skips Break confirmation.
 - Add 12 clock-edge tests and fit older test fixtures to their configured durations. Record phase I12 as verified (107 tests on an iPhone 17 Pro simulator, iOS 26.5, all passing with no known issues, with counts from the result bundle; user-reported Cmd+U), and update the iOS mission and tech stack. Known limit: if the saved configuration is unreadable while a longer phase runs, the cap shortens that phase to the default length.
+- Fix a review finding on I12: a saved deadline far outside the normal range (for example 1e20 seconds) crashed the app at launch, because the countdown was computed before the timer was reconciled. Launch now reconciles first, capping or completing such a deadline, and the conversions from seconds to whole numbers are bounded. Add launch regressions for extreme future and past deadlines, which crash without the fix, and record the Codex review and its resolution in the I12 spec (109 tests, all passing; user-reported Cmd+U).
 
 ## 2026-10-26
 
