@@ -30,6 +30,7 @@ Move a phase here when its phase spec is marked verified and the work is pushed.
 | I09 | Unreadable `config` or `state` replaced with defaults or idle, the other record kept, correction notice shown, pending alerts cancelled; a newer or unreadable `schemaVersion` keeps defaults in memory and writes nothing at launch, and the first save writes both records and the current version (64 tests: 63 passed, 1 expected failure for I12; agent-run iPhone 17 Pro iOS 26.5, user-reported Cmd+U and two seeded relaunch checks) | 2026-10-24 | [I09-recover-saved-records](phases/I09-recover-saved-records.md) | `0839457` on `main` |
 | I10 | Each Focus → Break cycle has a saved cycle ID carried in completion notifications; the Focus OK starts Break only for a matching ID, and stale, missing, or repeated actions change nothing; saved data moved to schema version 2 (80 tests: 79 passed, 1 expected failure for I12; agent-run iPhone 17 Pro iOS 26.5, user-reported Cmd+U and an upgrade check). Manual stale-alert tap check deferred, then superseded by the I11 Notification Center check | 2026-10-26 | [I10-cycle-identity](phases/I10-cycle-identity.md) | `0d7b35c` on `main` |
 | I11 | Delivered alerts removed once they no longer match the timer (Break start removes the Focus alert; Cancel and a new Focus cancel pending and remove delivered alerts; launch and activation clean up by phase); fixed a crash, present since the app was added, when tapping a notification's OK; Codex review finding fixed (new Focus cancels pending requests) (95 tests: 94 passed, 1 expected failure for I12; agent-run iPhone 17 Pro iOS 26.5, user-reported Cmd+U and Notification Center check) | 2026-10-26 | [I11-clean-up-alerts](phases/I11-clean-up-alerts.md) | `7bd31bc` on `main` |
+| I12 | Pause at or after expiry completes the phase (known issue fixed); after a backward clock jump a running deadline is capped at now + the phase length; an over-long saved paused time is clamped with the notice; Codex review finding fixed (launch reconciles before showing the countdown, so extreme saved deadlines no longer crash) (109 tests, all passing, 0 known issues; agent-run iPhone 17 Pro iOS 26.5, user-reported Cmd+U). Known limit: an unreadable config caps a longer running phase to the default | 2026-10-27 | [I12-expiry-clock-edges](phases/I12-expiry-clock-edges.md) | `1782b7b` on `main` |
 
 ## Small forward phases
 
@@ -37,7 +38,6 @@ Execute one phase at a time, in order. Before code, write a short phase spec at 
 
 | Phase | Small deliverable | Exit check |
 | --- | --- | --- |
-| I12 | Settle expiry and clock-edge behavior | Pause at expiry completes; test duplicate callbacks, delayed activation, forward/backward clock changes |
 | I13 | Add and persist the completed state | Break expiry enters completed once; migration/relaunch restores it with no active deadline |
 | I14 | Add in-app Done | Completed → idle; configuration survives; repeated Done is harmless |
 | I15 | Add in-app Restart | Completed → new Focus with saved durations and new cycle identity; Break still needs confirmation |
