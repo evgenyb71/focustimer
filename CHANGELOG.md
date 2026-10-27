@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-27
+
+- Complete a phase when it is paused at or after its deadline, instead of pausing it with one second left: Focus waits for Break confirmation and Break returns to idle. This fixes the known issue owned by I12.
+- Handle clock changes: after a backward clock jump, a running timer whose deadline is more than the phase's length away is moved to now plus that length, saved, and its alert rescheduled, with no notice. At launch, a saved paused time longer than the phase is clamped with the correction notice. A forward jump completes the phase on the next check and never skips Break confirmation.
+- Add 12 clock-edge tests and fit older test fixtures to their configured durations. Record phase I12 as verified (107 tests on an iPhone 17 Pro simulator, iOS 26.5, all passing with no known issues, with counts from the result bundle; user-reported Cmd+U), and update the iOS mission and tech stack. Known limit: if the saved configuration is unreadable while a longer phase runs, the cap shortens that phase to the default length.
+- Fix a review finding on I12: a saved deadline far outside the normal range (for example 1e20 seconds) crashed the app at launch, because the countdown was computed before the timer was reconciled. Launch now reconciles first, capping or completing such a deadline, and the conversions from seconds to whole numbers are bounded. Add launch regressions for extreme future and past deadlines, which crash without the fix, and record the Codex review and its resolution in the I12 spec (109 tests, all passing; user-reported Cmd+U).
+
 ## 2026-10-26
 
 - Give each Focus → Break cycle a saved cycle ID: it is created when Focus starts, kept while waiting for confirmation and during Break, and removed when Break completes or on Cancel. Completion notifications carry it, and the Focus notification's OK starts Break only when its ID matches the current cycle; an OK from an earlier cycle, without an ID, or repeated after Break started changes nothing.
@@ -11,6 +18,7 @@
 - Fix a crash when tapping a notification's OK: the notification delegate finished off the main thread, which UIKit rejects. The bug existed since the app was added and surfaced in the first real tap on an alert; the delegate now runs on the main actor.
 - Add 14 alert cleanup tests. Record phase I11 as verified (94 tests on an iPhone 17 Pro simulator, iOS 26.5, with counts from the result bundle; user-reported Cmd+U and a Notification Center check on the user's simulator after the crash fix), with the defect recorded in the I11 spec, and mark the I10 stale-alert ToDo as superseded by that check.
 - Fix a review finding on I11: starting a new Focus now also cancels pending alerts, so a Break alert still scheduled when launch ignored an unsupported saved version can no longer go off during the new Focus. Add a regression test with a test scheduler that tracks pending requests, and record the Codex review and its resolution in the I11 spec (95 tests, 94 passed, 1 expected failure; user-reported Cmd+U).
+- Move I11 to the roadmap's completed table with its merge commit, note that the I10 stale-alert check was superseded by I11's check, and add a session handoff to the I11 phase spec (next phase I12 and its open questions, known issues, test baseline, testing notes, environment, and deferred checks).
 
 ## 2026-10-24
 
