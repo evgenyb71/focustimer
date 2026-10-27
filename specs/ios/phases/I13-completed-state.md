@@ -1,6 +1,6 @@
 # I13 Add and persist the completed state
 
-Status: verified (2026-10-27): 135 test functions, all passed, 0 expected failures, agent-run on iPhone 17 Pro iOS 26.5; user-reported Cmd+U as expected and all steps of the upgrade and relaunch check on the iPhone 18 Pro Max (iOS 27.0). The agent did not read the stored data during steps 2 and 5; it read version 2 before and version 3 after. Implements roadmap phase I13, "Add and persist the completed state". Branch `feat/I13-completed-state`.
+Status: verified (2026-10-27): 135 test functions, all passed, 0 expected failures, agent-run on iPhone 17 Pro iOS 26.5; user-reported Cmd+U as expected and all steps of the upgrade and relaunch check on the iPhone 18 Pro Max (iOS 27.0). The agent did not read the stored data during steps 2 and 5; it read version 2 before and version 3 after. Implements roadmap phase I13, "Add and persist the completed state". Commit `079230f` (changelog `0594d59`) on branch `feat/I13-completed-state`; Codex review approved (as reported by the user, 2026-10-27); merged to `main` as `7eb24d5` and pushed.
 
 Context: [roadmap](../roadmap.md), [mission](../mission.md), [tech stack](../tech-stack.md), previous phases [I24](I24-end-states.md) (planned before this phase; it supplies the Break-end screen) and [I12](I12-expiry-clock-edges.md).
 
