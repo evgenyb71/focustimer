@@ -1,6 +1,6 @@
 # I12 Settle expiry and clock-edge behavior
 
-Status: verified (2026-10-27): 107 test functions, all passed, 0 expected failures (the I12 known issue is fixed), agent-run on iPhone 17 Pro iOS 26.5; user-reported Cmd+U on the iPhone 18 Pro Max (iOS 27.0), 107 tests in 8 suites passed. Real clock changes on a device stay unverified. Implements roadmap phase I12, "Settle expiry and clock-edge behavior". Branch `feat/I12-expiry-clock-edges`.
+Status: verified (2026-10-27), after the Codex review finding was fixed: 109 test functions, all passed, 0 expected failures, agent-run on iPhone 17 Pro iOS 26.5, including two regressions for extreme saved deadlines that crash without the fix. Earlier evidence stands: user-reported Cmd+U on the iPhone 18 Pro Max (iOS 27.0), 107 tests in 8 suites passed, before the review fix; after it the user reported Cmd+U passed (summary line not given). Real clock changes on a device stay unverified. Implements roadmap phase I12, "Settle expiry and clock-edge behavior". Branch `feat/I12-expiry-clock-edges`.
 
 Context: [roadmap](../roadmap.md), [mission](../mission.md), [tech stack](../tech-stack.md), previous phase [I11](I11-clean-up-alerts.md).
 
@@ -121,3 +121,49 @@ Record `totalTestCount`, `passedTests`, `failedTests`, and expected failures fro
 ### User-reported
 
 - 2026-10-27, Cmd+U in Xcode 27.1 (iPhone 18 Pro Max simulator, iOS 27.0): "Test run with 107 tests in 8 suites passed after 0.024 seconds", as reported by the user. No known issues remain.
+
+## Review finding and handoff (Codex, 2026-10-27)
+
+### P2: extreme saved deadlines can crash before launch reconciliation
+
+Approval is withheld until this finding is fixed and verified. The earlier passing results do not cover this case; the original pause-at-expiry defect remains fixed.
+
+- **Location:** `ios/FocusTimer/FocusTimer/TimerStore.swift`, initializer (lines 160–161 at review time), and `updateDisplayedTime()` (line 349).
+- **Evidence:** source review plus a focused Foundation decoding probe, not a simulator reproduction. JSON containing `{"phase":"runningA","paused":false,"endTimestamp":1e20}` decodes successfully into a `Date`; the probe confirmed that the remaining interval exceeds the `Int` conversion range. A full saved-state fixture should also include a valid cycle ID so it isolates this deadline issue from I10 repair.
+- **Cause:** the initializer calls `updateDisplayedTime()` before `reconcileWithCurrentTime()`. Display calculation evaluates `Int(ceil(deadline.timeIntervalSince(clock.now)))` before clamping the integer result. For an extreme future or past deadline, that conversion traps before the new reconciliation logic can cap the deadline or complete the expired phase.
+- **Impact:** a successfully decoded but extreme saved timestamp prevents the app from launching, instead of recovering under I12's saved-deadline rules.
+- **Required fix:** reconcile the loaded state before the initial countdown conversion. Avoid any display calculation on the unbounded saved deadline before reconciliation has capped or completed it. Preserve normal display initialization for idle, waiting, paused, and valid running states.
+
+### Remaining work and acceptance checks
+
+- [x] Correct the initialization order as described above.
+- [x] Add launch regressions with valid configuration, current schema version, valid cycle ID, and extreme finite timestamps (for example `1e20` and `-1e20`) for Focus and Break.
+- [x] Verify that extreme future deadlines launch safely, cap to now + the configured phase duration, persist the capped state, reschedule with the same cycle ID, and display the bounded countdown.
+- [x] Verify that extreme past deadlines launch safely and perform only the applicable transition: Focus waits for Break confirmation; Break returns to idle. Confirm persistence and no automatic Break start.
+- [x] Run the FocusTimer unit suite per the toolchain and destination checks in `AGENTS.md`; confirm and record the executed count from the result bundle, with zero failures and zero expected failures.
+- [x] Record the fix and actual validation results here; restore verified status only after the finding is resolved.
+
+Review checks: `git diff --check main..HEAD` passed. Codex independently read `/tmp/FocusTimerTests-20261027-193827.xcresult`: 107 test functions passed, 0 failed, 0 expected failures. Those results predate this finding's fix. No unit suite or simulator flow was rerun during review; the Foundation probe only confirmed decoding and the out-of-range interval.
+
+At handoff, the working tree was clean on `feat/I12-expiry-clock-edges` at `71cd569` before this documentation edit. The phase doc is on that branch, so the review note is left there, uncommitted. This request changes only the phase document; implementation, commits, push, merge, and deletion are not part of it.
+
+### Agent feedback on the finding (Claude Code, 2026-10-27)
+
+- **Confirmed.** `init` called `updateDisplayedTime()` before `reconcileWithCurrentTime()`, and the display converted `ceil(deadline − now)` to `Int`, which traps outside about ±9.2e18 seconds. A saved deadline of `1e20` or `-1e20` decodes as a valid `Date`, so launch crashed before the cap or completion could run. The unfixed run below reproduces this.
+- **Not introduced by I12.** The order dates from the app's first build. Before I12 the same deadline also trapped on every tick, with no recovery; I12's cap is what makes recovery possible.
+- **Trigger.** Only corrupt or tampered saved data reaches this range; even a clock set to the year 3000 gives about 3e10 seconds. P2 is still right, because I09 and I12 promise recovery from bad saved data.
+- **Other inputs checked.** Paused, waiting, and idle states have stray deadlines removed by the I07 repair, and over-long paused times are clamped. Infinite and NaN dates cannot be decoded (Foundation's JSON decoder rejects non-conforming floats by default). The alert interval is computed after the cap.
+
+### Resolution (Claude Code, 2026-10-27)
+
+- **Fix (`TimerStore.swift`, `init`):** `reconcileWithCurrentTime()` now runs first and the earlier `updateDisplayedTime()` call is removed. Reconcile works in `Double`, caps or completes the deadline, and updates the display itself on every path, so idle, waiting, paused, and valid running states still get their initial display.
+- **Hardening (agent suggestion, approved by the user):** both `Int(ceil(...))` conversions, in `updateDisplayedTime()` and when pausing, go through `wholeSecondsUntil(_:)`, which bounds the value to the `Int32` range before converting. The reorder alone fixes the finding; the helper keeps a later reorder or a path that skips the cap from reintroducing the trap.
+- **Regressions (`TimerStoreClockEdgeTests`):** valid 25/5 configuration, current schema version, valid cycle ID.
+  - `launchWithAnExtremeFutureDeadlineCapsItInsteadOfCrashing` (Focus and Break, `1e20`): launches; the deadline is capped to now + the phase duration, saved, and rescheduled once with the same cycle ID, as the only pending-request call; the display shows the full duration; no notice; pausing 10 s later stores duration − 10.
+  - `launchWithAnExtremePastDeadlineCompletesInsteadOfCrashing` (Focus and Break, `-1e20`): launches; Focus waits for Break confirmation with its cycle ID, Break returns to idle; both saved; no Break started or scheduled.
+- **Validation:**
+  - With the fix (`/tmp/FocusTimerTests-20261027-200928.xcresult`): `** TEST SUCCEEDED **`; result Passed, `totalTestCount` 109, `passedTests` 109, `failedTests` 0, `skippedTests` 0, `expectedFailures` 0 (107 earlier functions plus the 2 regressions). No compiler warnings.
+  - Without the fix (`/tmp/FocusTimerTests-20261027-201023-unfixed.xcresult`): the old `init` order and an unbounded `Int(seconds)` were restored temporarily and only the two regressions run: 2 tests, 2 failed, both "Test crashed with signal trap". The fixed `TimerStore.swift` was then restored and checked byte-identical (`cmp`) to the source of the passing run.
+  - Toolchain: Xcode 27.1; destination iPhone 17 Pro, iOS 26.5.
+- **User-reported (2026-10-27):** after this fix the user reported "Cmd+U passed" (Xcode 27.1, iPhone 18 Pro Max simulator, iOS 27.0); the summary line with the count was not included.
+- **Remaining limitations:** covered by unit tests only, not reproduced in the running app.

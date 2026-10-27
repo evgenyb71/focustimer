@@ -157,7 +157,8 @@ final class TimerStore: ObservableObject {
             versionNeedsWrite = true
             noticeMessage = Self.repairNotice
         }
-        updateDisplayedTime()
+        // Reconcile before anything reads the countdown: it caps or completes a saved deadline that is out
+        // of range, and it updates the display itself.
         reconcileWithCurrentTime()
         removeObsoleteDeliveredCompletions()
         startTicker()
@@ -242,7 +243,7 @@ final class TimerStore: ObservableObject {
             // At or after expiry the phase completes instead of pausing.
             reconcileWithCurrentTime()
             guard canPause, !state.paused, let deadline = state.endTimestamp else { return }
-            let remaining = max(1, Int(ceil(deadline.timeIntervalSince(clock.now))))
+            let remaining = max(1, wholeSecondsUntil(deadline))
             state.endTimestamp = nil
             state.remainingSeconds = remaining
             state.paused = true
@@ -342,11 +343,18 @@ final class TimerStore: ObservableObject {
         updateDisplayedTime()
     }
 
+    /// Whole seconds until the deadline, rounded up. Bounded before the `Int` conversion, which would trap
+    /// on an extreme saved date.
+    private func wholeSecondsUntil(_ deadline: Date) -> Int {
+        let seconds = ceil(deadline.timeIntervalSince(clock.now))
+        return Int(min(max(seconds, Double(Int32.min)), Double(Int32.max)))
+    }
+
     private func updateDisplayedTime() {
         if state.paused, let remaining = state.remainingSeconds {
             displayedSeconds = max(0, remaining)
         } else if let deadline = state.endTimestamp {
-            displayedSeconds = max(0, Int(ceil(deadline.timeIntervalSince(clock.now))))
+            displayedSeconds = max(0, wholeSecondsUntil(deadline))
         } else if state.phase == .waitingForAConfirm {
             displayedSeconds = 0
         } else {

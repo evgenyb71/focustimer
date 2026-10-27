@@ -1836,7 +1836,54 @@ struct TimerStoreClockEdgeTests {
         #expect(timer.state.endTimestamp == clock.now.addingTimeInterval(60))
     }
 
-    // MARK: Over-long saved paused time
+    // MARK: Extreme saved deadlines (Codex review)
+
+    func storePhase(_ phase: ClockJumpPhase) -> TimerStore.Phase {
+        phase == .focus ? .runningA : .runningB
+    }
+
+    @Test(arguments: ClockJumpPhase.allCases)
+    func launchWithAnExtremeFutureDeadlineCapsItInsteadOfCrashing(_ phase: ClockJumpPhase) {
+        let cycleID = UUID()
+        // Far outside the Int range in seconds, but a valid saved Date.
+        let extreme = Date(timeIntervalSinceReferenceDate: 1e20)
+        seed(state: TimerStore.TimerState(phase: storePhase(phase), endTimestamp: extreme, cycleID: cycleID))
+
+        let timer = relaunch()
+
+        let capped = clock.now.addingTimeInterval(TimeInterval(duration(phase)))
+        #expect(timer.state == TimerStore.TimerState(phase: storePhase(phase), endTimestamp: capped, cycleID: cycleID))
+        #expect(savedState() == timer.state)
+        #expect(timer.displayedSeconds == duration(phase))
+        #expect(timer.statusMessage != TimerStore.repairNotice)
+        // The capped reschedule is the only pending-request call at launch.
+        #expect(notifications.pendingCalls == [.schedule(phase: storePhase(phase), deadline: capped, now: clock.now)])
+        #expect(notifications.scheduledCycleIDs == [cycleID])
+
+        clock.advance(by: 10)
+        timer.pauseOrResume()
+        #expect(timer.state.paused)
+        #expect(timer.state.remainingSeconds == duration(phase) - 10)
+    }
+
+    @Test(arguments: ClockJumpPhase.allCases)
+    func launchWithAnExtremePastDeadlineCompletesInsteadOfCrashing(_ phase: ClockJumpPhase) {
+        let cycleID = UUID()
+        let extreme = Date(timeIntervalSinceReferenceDate: -1e20)
+        seed(state: TimerStore.TimerState(phase: storePhase(phase), endTimestamp: extreme, cycleID: cycleID))
+
+        let timer = relaunch()
+
+        let expected = phase == .focus
+            ? TimerStore.TimerState(phase: .waitingForAConfirm, cycleID: cycleID)
+            : TimerStore.TimerState()
+        #expect(timer.state == expected)
+        #expect(savedState() == expected)
+        #expect(timer.displayedSeconds == (phase == .focus ? 0 : nil))
+        // No Break is started or scheduled; Break completion only cancels its own pending request.
+        #expect(notifications.pendingCalls == (phase == .focus ? [] : [.cancel(phase: .runningB)]))
+    }
+
 
     @Test(arguments: ClockJumpPhase.allCases)
     func launchClampsAnOverLongPausedTimeWithNotice(_ phase: ClockJumpPhase) {
