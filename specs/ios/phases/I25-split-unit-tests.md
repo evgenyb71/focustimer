@@ -1,6 +1,6 @@
 # I25 Split the unit tests by area
 
-Status: verified (2026-11-02): 135 tests before and after the split, all passed, identical test identifiers, agent-run on iPhone 17 Pro iOS 26.5; user-reported Cmd+U passed. Not yet committed or merged. Implements roadmap phase I25, "Split the unit tests by area (added for parallel work)". Branch `feat/I25-split-unit-tests`, worktree `.claude/worktrees/I25-split-unit-tests`, agent tool Claude Code, agent simulator iPhone 17 Pro, iOS 26.5 (`0AC7E848-0A25-4AB4-AD98-A987990FB358`). Claims held: `refs/claims/I25`, `refs/claims/sim/0AC7E848-0A25-4AB4-AD98-A987990FB358`.
+Status: verified (2026-11-02): 135 tests before and after the split, all passed, identical test identifiers, agent-run on iPhone 17 Pro iOS 26.5; user-reported Cmd+U passed. Commit `896377f` (changelog and spec `e41dd22`) on branch `feat/I25-split-unit-tests`; merged to `main` as `d1f6337` (not yet pushed). Implements roadmap phase I25, "Split the unit tests by area (added for parallel work)". Branch `feat/I25-split-unit-tests`, worktree `.claude/worktrees/I25-split-unit-tests`, agent tool Claude Code, agent simulator iPhone 17 Pro, iOS 26.5 (`0AC7E848-0A25-4AB4-AD98-A987990FB358`). Claims held: `refs/claims/I25`, `refs/claims/sim/0AC7E848-0A25-4AB4-AD98-A987990FB358`.
 
 Context: [roadmap](../roadmap.md) (see "Running phases in parallel"), [mission](../mission.md), [tech stack](../tech-stack.md), [Parallel work in AGENTS.md](../../../AGENTS.md#parallel-work), previous phase [I13](I13-completed-state.md).
 
@@ -92,8 +92,8 @@ Only test files move, so app behavior cannot change. The tests that guard the in
    - [x] Merge `main` into this branch; record the tested base (`git rev-parse main`).
    - [x] If `main` moved since step 3, rerun the full tests and record the bundle and count.
    - [x] Run `$update-changelog`; commit when the user asks.
-   - [ ] Freshness gate: in the integration checkout, `git rev-parse main` still equals the tested base, then `git merge --no-ff feat/I25-split-unit-tests`.
-   - [ ] In `chore/roadmap-after-I25` from `main`: move I25 from the forward table to the completed table (deliverable, date, spec link, pushed commit).
+   - [x] Freshness gate: in the integration checkout, `git rev-parse main` still equals the tested base, then `git merge --no-ff feat/I25-split-unit-tests`.
+   - [x] In `chore/roadmap-after-I25` from `main`: move I25 from the forward table to the completed table (deliverable, date, spec link, pushed commit).
    - [ ] With the user's yes, release `refs/claims/integration`, `refs/claims/I25`, and `refs/claims/sim/0AC7E848-0A25-4AB4-AD98-A987990FB358`.
 
 ## Validation
@@ -147,6 +147,8 @@ Acceptance:
 ### Integration (2026-11-02)
 
 - Implementation commit `896377f` on `feat/I25-split-unit-tests`. Integration claim taken; `git merge main` was already up to date. Tested base: `main` at `448f8de`, the commit both test runs used, so no rerun was needed.
+
+- Freshness gate: in the integration checkout `main` was still `448f8de`; merged with `--no-ff` as `d1f6337`. Roadmap row moved in `chore/roadmap-after-I25`; the pushed commit is to be filled in after the push.
 
 ### User-reported
 
