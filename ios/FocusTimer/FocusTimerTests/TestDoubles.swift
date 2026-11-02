@@ -98,3 +98,19 @@ extension TimerStore.TimerState {
         return state
     }
 }
+
+// MARK: Shared test arguments
+
+enum TimedPhase: CaseIterable, Sendable {
+    case focus
+    case breakTime
+}
+
+enum UnversionedState: CaseIterable, Sendable {
+    case idle
+    case runningFocus
+    case runningBreak
+    case pausedFocus
+    case pausedBreak
+    case waitingForBreak
+}

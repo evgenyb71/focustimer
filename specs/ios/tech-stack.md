@@ -21,7 +21,7 @@ Status: baseline and accepted constraints as of 2026-10-16; updated 2026-10-24 f
 - `ios/FocusTimer/FocusTimer/TimerStore.swift`: configuration, transitions, persistence, countdown, and deadline reconciliation.
 - `Clock.swift`: `Clock` protocol and `SystemClock` (current time); `KeyValueStore.swift`: storage protocol and `UserDefaults` conformance.
 - `NotificationScheduler.swift`: notification identifiers, category setup, and authorization (`NotificationScheduler`); the `NotificationScheduling` protocol and its `SystemNotificationScheduler` implementation for scheduling and cancelling completions.
-- `ios/FocusTimer/FocusTimerTests/`: Swift Testing unit tests (`FocusTimerTests.swift`) and test doubles (`TestDoubles.swift`).
+- `ios/FocusTimer/FocusTimerTests/`: Swift Testing unit tests, one file per suite since phase [I25](phases/I25-split-unit-tests.md) (`TimerStoreNotificationTests`, `…TransitionTests`, `…InvariantTests`, `…MigrationTests`, `…RecoveryTests`, `…CycleTests`, `…AlertCleanupTests`, `…ClockEdgeTests`, `…EndStateTests`, `…CompletedStateTests`, each `.swift`), and test doubles plus shared test arguments (`TestDoubles.swift`). New phases add their tests in a new file; see the test convention in `AGENTS.md`.
 - `FocusTimerApp.swift`: application entry, scene lifecycle, notification response delegation.
 - `ContentView.swift`: durations, status, and controls, including the end-state presentation driven by `TimerStore.endState` (since I24); `Assets.xcassets`: color/icon slots.
 
@@ -53,7 +53,7 @@ Run the unit tests from the root of the phase's worktree on an installed iOS 26+
 xcodebuild -project ios/FocusTimer/FocusTimer.xcodeproj -scheme FocusTimer -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5' -derivedDataPath /tmp/FocusTimerDerivedData-Ixx -resultBundlePath /tmp/FocusTimerTests-Ixx-$(date +%Y%m%d-%H%M%S).xcresult CODE_SIGNING_ALLOWED=NO test
 ```
 
-Confirm the executed test count with `xcrun xcresulttool get test-results summary --path <result bundle>`; a success banner with 0 tests is possible when the target's synchronized folder is not attached. Tests live in `ios/FocusTimer/FocusTimerTests/` and use `TestDoubles.swift` (fake clock, in-memory store, recording notification scheduler). Keep these deterministic tests separate from real OS notification and lifecycle checks, which stay manual.
+Confirm the executed test count with `xcrun xcresulttool get test-results summary --path <result bundle>`; a success banner with 0 tests is possible when the target's synchronized folder is not attached. Tests live in `ios/FocusTimer/FocusTimerTests/`, one file per suite, and use `TestDoubles.swift` (fake clock, in-memory store, recording notification scheduler, and the `TimedPhase` and `UnversionedState` arguments shared by several suites). Keep these deterministic tests separate from real OS notification and lifecycle checks, which stay manual.
 
 ## References
 
