@@ -1,6 +1,6 @@
 # I25 Split the unit tests by area
 
-Status: verified (2026-11-02): 135 tests before and after the split, all passed, identical test identifiers, agent-run on iPhone 17 Pro iOS 26.5; user-reported Cmd+U passed. Commit `896377f` (changelog and spec `e41dd22`) on branch `feat/I25-split-unit-tests`; merged to `main` as `d1f6337` (not yet pushed). Implements roadmap phase I25, "Split the unit tests by area (added for parallel work)". Branch `feat/I25-split-unit-tests`, worktree `.claude/worktrees/I25-split-unit-tests`, agent tool Claude Code, agent simulator iPhone 17 Pro, iOS 26.5 (`0AC7E848-0A25-4AB4-AD98-A987990FB358`). Claims held: `refs/claims/I25`, `refs/claims/sim/0AC7E848-0A25-4AB4-AD98-A987990FB358`.
+Status: verified (2026-11-02): 135 tests before and after the split, all passed, identical test identifiers, agent-run on iPhone 17 Pro iOS 26.5; user-reported Cmd+U passed. Commit `896377f` (changelog and spec `e41dd22`) on branch `feat/I25-split-unit-tests`; merged to `main` as `d1f6337` and pushed. Implements roadmap phase I25, "Split the unit tests by area (added for parallel work)". Branch `feat/I25-split-unit-tests`, worktree `.claude/worktrees/I25-split-unit-tests`, agent tool Claude Code, agent simulator iPhone 17 Pro, iOS 26.5 (`0AC7E848-0A25-4AB4-AD98-A987990FB358`). Claims held: `refs/claims/I25`, `refs/claims/sim/0AC7E848-0A25-4AB4-AD98-A987990FB358`.
 
 Context: [roadmap](../roadmap.md) (see "Running phases in parallel"), [mission](../mission.md), [tech stack](../tech-stack.md), [Parallel work in AGENTS.md](../../../AGENTS.md#parallel-work), previous phase [I13](I13-completed-state.md).
 
@@ -148,7 +148,7 @@ Acceptance:
 
 - Implementation commit `896377f` on `feat/I25-split-unit-tests`. Integration claim taken; `git merge main` was already up to date. Tested base: `main` at `448f8de`, the commit both test runs used, so no rerun was needed.
 
-- Freshness gate: in the integration checkout `main` was still `448f8de`; merged with `--no-ff` as `d1f6337`. Roadmap row moved in `chore/roadmap-after-I25`; the pushed commit is to be filled in after the push.
+- Freshness gate: in the integration checkout `main` was still `448f8de`; merged with `--no-ff` as `d1f6337`. Roadmap row moved in `chore/roadmap-after-I25` (merged as `96e30d4`); pushed to `origin/main` on 2026-11-02, and the roadmap row's pushed commit filled in.
 
 ### User-reported
 
