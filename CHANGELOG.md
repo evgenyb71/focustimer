@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-11-02
+
+- Document how several agents can work on iOS phases in parallel. The roadmap's forward table now lists each phase's dependencies, the main files it touches, and whether it may change the saved format; it adds phase I25 (split the unit tests by area) as a prerequisite for the parallel code phases, makes I19 wait for I18, and moves completed-table updates to `main` after each merge.
+- Add a Parallel work section to `AGENTS.md`:
+  - Agents claim phases, simulators, and integration with create-only git refs under `refs/claims/`.
+  - Each phase works in its own worktree, with its own build output paths and simulator.
+  - Agents read other phases' uncommitted specs from their worktrees.
+  - Merges into `main` go through one integration checkout, one branch at a time, with a check that `main` has not moved since the last verification. Branches that change only docs need documentation checks instead of a test run.
+  - Claims are released, abandoned, or reassigned only with the user's yes.
+- Update the `start-phase`, `end-session`, and `update-changelog` skills (Claude Code and Codex copies) to follow these rules:
+  - `start-phase` picks a ready phase that no agent has claimed, and rechecks the claims after the interview. It reports any claims still held if setup fails partway.
+  - `end-session` works on this session's own phase spec and lists the claims it holds.
+  - `update-changelog` stops if `main` has moved and needs merging first.
+- Update `CLAUDE.md` and the build and test commands in the tech stack to match.
+
 ## 2026-10-27
 
 - Complete a phase when it is paused at or after its deadline, instead of pausing it with one second left: Focus waits for Break confirmation and Break returns to idle. This fixes the known issue owned by I12.
