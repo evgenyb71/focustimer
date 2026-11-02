@@ -79,7 +79,7 @@ Release a claim with `git update-ref -d refs/claims/<name>`. That is a delete: s
 
 - `chrome/src/`, `chrome/assets/`, `chrome/manifest.json`: plain JavaScript/HTML/CSS, Manifest V3, no dependencies or build step.
 - `ios/FocusTimer/FocusTimer/`: Swift 6, SwiftUI, Foundation, UIKit lifecycle bridge, UserDefaults, UserNotifications. iPhone only, portrait, minimum iOS 26.0; Apple frameworks only.
-- `ios/FocusTimer/FocusTimer.xcodeproj`: FocusTimer scheme, app target, and the `FocusTimerTests` unit-test target (`ios/FocusTimer/FocusTimerTests/`, hosted by the app). Unit tests use Swift Testing (`import Testing`); reserve XCTest for a future UI-test target. Keep test targets beside the app in this project, with `*Tests.swift` filenames.
+- `ios/FocusTimer/FocusTimer.xcodeproj`: FocusTimer scheme, app target, and the `FocusTimerTests` unit-test target (`ios/FocusTimer/FocusTimerTests/`, hosted by the app). Unit tests use Swift Testing (`import Testing`); reserve XCTest for a future UI-test target. Keep test targets beside the app in this project, with `*Tests.swift` filenames. Since phase I25, unit tests are split one file per suite, named after the suite (for example `TimerStoreTransitionTests.swift`). A phase adds its new tests in a new `*Tests.swift` file of its own and edits an existing test file only to update tests its change affects; helpers or test arguments shared by several files go in `TestDoubles.swift`. The target uses a synchronized folder, so new files need no project edit.
 - `specs/`: active platform constitutions, future phase specs, historical references.
 - Root `README.md`: navigation and local setup; `CHANGELOG.md`: dated project changes.
 
