@@ -42,15 +42,15 @@ Open `ios/FocusTimer/FocusTimer.xcodeproj` in Xcode 26.5 or later, select the Fo
 From the repository root, build without signing:
 
 ```sh
-xcodebuild -project ios/FocusTimer/FocusTimer.xcodeproj -scheme FocusTimer -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/FocusTimerDerivedData CODE_SIGNING_ALLOWED=NO build
+xcodebuild -project ios/FocusTimer/FocusTimer.xcodeproj -scheme FocusTimer -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/FocusTimerDerivedData-Ixx CODE_SIGNING_ALLOWED=NO build
 ```
 
 Select the full Xcode developer directory if the machine defaults to Command Line Tools. The command is documented here, not rerun as part of the documentation migration. No `npm` commands, package resolution, or code generation apply.
 
-Run the unit tests from the repository root on an installed iOS 26+ simulator (agents have used iPhone 17 Pro, iOS 26.5), or with Product > Test in Xcode:
+Run the unit tests from the root of the phase's worktree on an installed iOS 26+ simulator that no other phase is using (agents have used iPhone 17 Pro, iOS 26.5), or with Product > Test in Xcode. Replace `Ixx` with the phase ID; per-phase output paths let parallel phases build without clashing (see [Parallel work in AGENTS.md](../../AGENTS.md#parallel-work)):
 
 ```sh
-xcodebuild -project ios/FocusTimer/FocusTimer.xcodeproj -scheme FocusTimer -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5' -derivedDataPath /tmp/FocusTimerDerivedData -resultBundlePath /tmp/FocusTimerTests-$(date +%Y%m%d-%H%M%S).xcresult CODE_SIGNING_ALLOWED=NO test
+xcodebuild -project ios/FocusTimer/FocusTimer.xcodeproj -scheme FocusTimer -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5' -derivedDataPath /tmp/FocusTimerDerivedData-Ixx -resultBundlePath /tmp/FocusTimerTests-Ixx-$(date +%Y%m%d-%H%M%S).xcresult CODE_SIGNING_ALLOWED=NO test
 ```
 
 Confirm the executed test count with `xcrun xcresulttool get test-results summary --path <result bundle>`; a success banner with 0 tests is possible when the target's synchronized folder is not attached. Tests live in `ios/FocusTimer/FocusTimerTests/` and use `TestDoubles.swift` (fake clock, in-memory store, recording notification scheduler). Keep these deterministic tests separate from real OS notification and lifecycle checks, which stay manual.
