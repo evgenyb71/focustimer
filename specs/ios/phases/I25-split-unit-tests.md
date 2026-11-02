@@ -39,7 +39,7 @@ Each suite already has its own helpers (`makeTimer`, `seed`, `load`, `savedState
 
 - **One blank line removed** (found during implementation): the original had two blank lines between `TimerStoreAlertCleanupTests` and the `ClockJumpPhase` enum (line 1674), at a point where the file is split. Each new file uses one blank line between declarations. The other double blank line (line 1889, inside `TimerStoreClockEdgeTests`) is kept verbatim.
 
-- **The original file becomes the first suite's file.** `FocusTimerTests.swift` is renamed with `git mv` to `TimerStoreNotificationTests.swift` and trimmed to that suite, so `git log --follow` keeps its history. The other suites are cut out into new files. Renaming removes the old file name, so the agent shows the exact `git mv` command and waits for the user's yes before running it.
+- **The original file becomes the first suite's file.** `FocusTimerTests.swift` is renamed with `git mv` to `TimerStoreNotificationTests.swift` and trimmed to that suite. Outcome: only 98 of 2,336 lines remain, so Git records a delete and an add, and `git log --follow` does not link the history; use `git log -- ios/FocusTimer/FocusTimerTests/FocusTimerTests.swift` for the old file. The other suites are cut out into new files. Renaming removes the old file name, so the agent shows the exact `git mv` command and waits for the user's yes before running it.
 - **Text moves verbatim.** Each file gets the same three imports (`Foundation`, `Testing`, `@testable import FocusTimer`) and the suite's code unchanged, including its `@MainActor` attribute, `// MARK:` comments, and blank lines. Nothing is renamed or reformatted.
 - **Shared enums go after the existing doubles** in `TestDoubles.swift`, under a `// MARK: Shared test arguments` comment, with their current access level and `Sendable`/`CaseIterable` conformances.
 - **Convention text** (for `AGENTS.md` repository layout and the tech-stack source map): unit tests are split one file per area, named after the suite; a phase adds its new tests in a new `*Tests.swift` file of its own, edits an existing test file only to update tests its change affects, and puts helpers shared by several files in `TestDoubles.swift`.
@@ -88,10 +88,10 @@ Only test files move, so app behavior cannot change. The tests that guard the in
    - [x] `git diff --check`; check relative links.
    - [x] Ask the user for Cmd+U in Xcode, opened from this worktree, and record the reported result.
 5. Integration (following the Integration steps in `AGENTS.md`, only when the user asks to merge)
-   - [ ] Take `refs/claims/integration`.
-   - [ ] Merge `main` into this branch; record the tested base (`git rev-parse main`).
-   - [ ] If `main` moved since step 3, rerun the full tests and record the bundle and count.
-   - [ ] Run `$update-changelog`; commit when the user asks.
+   - [x] Take `refs/claims/integration`.
+   - [x] Merge `main` into this branch; record the tested base (`git rev-parse main`).
+   - [x] If `main` moved since step 3, rerun the full tests and record the bundle and count.
+   - [x] Run `$update-changelog`; commit when the user asks.
    - [ ] Freshness gate: in the integration checkout, `git rev-parse main` still equals the tested base, then `git merge --no-ff feat/I25-split-unit-tests`.
    - [ ] In `chore/roadmap-after-I25` from `main`: move I25 from the forward table to the completed table (deliverable, date, spec link, pushed commit).
    - [ ] With the user's yes, release `refs/claims/integration`, `refs/claims/I25`, and `refs/claims/sim/0AC7E848-0A25-4AB4-AD98-A987990FB358`.
@@ -143,6 +143,10 @@ Acceptance:
 - A3: the sorted lists of 135 test identifiers before and after are identical (`diff` shows no difference).
 - A5: `git diff --stat main` lists only `ios/FocusTimer/FocusTimerTests/` files, `AGENTS.md`, and `specs/ios/tech-stack.md` (plus the untracked new test files and this spec); no `project.pbxproj` change. Resulting files: `TimerStoreNotificationTests` 98 lines, `…TransitionTests` 490, `…InvariantTests` 247, `…MigrationTests` 168, `…RecoveryTests` 164, `…CycleTests` 260, `…AlertCleanupTests` 249, `…ClockEdgeTests` 292, `…EndStateTests` 140, `…CompletedStateTests` 240, `TestDoubles.swift` 116.
 - A6: `git diff --check` clean; relative links in this spec, `AGENTS.md`, and the tech stack resolve.
+
+### Integration (2026-11-02)
+
+- Implementation commit `896377f` on `feat/I25-split-unit-tests`. Integration claim taken; `git merge main` was already up to date. Tested base: `main` at `448f8de`, the commit both test runs used, so no rerun was needed.
 
 ### User-reported
 
