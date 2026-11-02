@@ -15,6 +15,7 @@
   - `update-changelog` stops if `main` has moved and needs merging first.
 - Update `CLAUDE.md` and the build and test commands in the tech stack to match.
 - Split the unit tests into one file per suite (phase I25): each of the ten Swift Testing suites moved from `FocusTimerTests.swift` into a file named after it, with no test changes, and the `TimedPhase` and `UnversionedState` test arguments moved to `TestDoubles.swift`. Record I25 as verified (135 tests before and after on an iPhone 17 Pro simulator, iOS 26.5, all passing with identical test identifiers, with counts from the result bundles; user-reported Cmd+U), and document in `AGENTS.md` and the tech stack that each phase adds its tests in a new file.
+- Move I25 to the roadmap's completed table with its merge commit, and record the push in the I25 spec.
 
 ## 2026-10-27
 
