@@ -1,6 +1,6 @@
 # iOS roadmap
 
-Status: accepted high-level order on 2026-10-16. Baseline `6e00429`. Completed phases are listed in the table below; the others are unstarted; documentation approval does not mark implementation complete.
+Status: accepted high-level order on 2026-10-16; dependencies and parallel-work rules added 2026-11-02. Baseline `6e00429`. Completed phases are listed in the table below; the others are unstarted; documentation approval does not mark implementation complete.
 
 ## Retrospective
 
@@ -36,22 +36,36 @@ Move a phase here when its phase spec is marked verified and the work is pushed.
 
 ## Small forward phases
 
-Execute one phase at a time, in order. Before code, write a short phase spec at `specs/ios/phases/Ixx-short-name.md` covering intended behavior, non-goals, affected components, and concrete acceptance checks. Update it with evidence and limitations after verification. Split a phase further if it cannot fit a focused, reviewable change; do not bundle later features into a refactor.
+Before code, write a short phase spec at `specs/ios/phases/Ixx-short-name.md` covering intended behavior, non-goals, affected components, and concrete acceptance checks. Update it with evidence and limitations after verification. Split a phase further if it cannot fit a focused, reviewable change; do not bundle later features into a refactor.
 
-| Phase | Small deliverable | Exit check |
-| --- | --- | --- |
-| I14 | Add in-app Done | Completed → idle; configuration survives; repeated Done is harmless |
-| I15 | Add in-app Restart | Completed → new Focus with saved durations and new cycle identity; Break still needs confirmation |
-| I16 | Add notification Done | Valid Break completion notification routes to Done; stale/duplicate actions are ignored |
-| I17 | Add notification Restart | Valid action starts one Focus; foreground/background/relaunch paths are checked |
-| I18 | Show permission status and useful failure guidance | Denied alerts and scheduling errors do not block timer flow; Settings guidance is available |
-| I19 | Verify accessibility and visual resilience | Check VoiceOver, Dynamic Type, contrast, focus/order, control labels and largest supported text sizes |
-| I20 | Supply final app icon | Complete the 1024×1024 artwork slot and verify appearance in the app/launcher |
-| I21 | Prepare local release notes and verification checklist | Record version /build, privacy behavior, known limits, device checks, and reproducible build steps |
-| I22 | Decide and implement launch-state policy (added after I01) | Record in the [mission](mission.md) whether each state (running, paused, waiting for Break confirmation, completed) is restored or reset on relaunch, keeping deadline recovery for running phases unless the decision changes that invariant. Behavior matches the decision for every state, with tests and a manual relaunch check; I01 observed the app reopening in waiting-for-Break. Note: whne timer is On, exit and re-start before timer ends - gets us back to phase + correct time to end. |
-| I23 | Make the active timer obvious (added after I01) | Design note in the phase spec, then the SwiftUI change: Focus and Break are visually distinct in running, paused, and waiting states. User-reported simulator screenshots show the active timer is identifiable at a glance; accessibility labels name it |
+### Running phases in parallel
 
-Add focused XCTest coverage with each behavior change after the test target exists. Use native UI tests for meaningful control/state interactions; use manual simulator and physical-device checks for OS notification behavior. Unit success does not prove delivery under system restrictions. If baseline checks fail, specify and resolve the smallest blocking defect before proceeding.
+Phases can run at the same time, each in its own branch and git worktree (see [Parallel work in AGENTS.md](../../AGENTS.md#parallel-work)). The table below says when that is safe:
+
+- **Ready:** a phase is ready when every phase in its *Depends on* column is in the completed table. The column is the only gate: ordering rules such as "I25 first" are written into it, not left to prose.
+- **Taken:** a phase is taken while its claim ref `refs/claims/Ixx` exists, or a `feat/Ixx-*` branch exists and the phase is not yet in the completed table, or its spec on `main` says in progress. A taken phase whose spec cannot be read (no worktree with the spec and none on its branch) is unavailable until the user clarifies it. Do not start a taken phase; continue it instead. Claims are made, rechecked, and released as described in [Parallel work in AGENTS.md](../../AGENTS.md#parallel-work).
+- **Overlap:** two ready phases can run in parallel when their *Touches* columns share no entry. If they share one, run them one after the other, or start the second only with the user's agreement and expect the later merge to need conflict resolution.
+- **Saved format:** a phase marked *may change* takes the next free `schemaVersion` when it merges, not when it starts (see AGENTS.md).
+
+*Touches* lists the main files a phase is expected to change: Swift files under `ios/FocusTimer/FocusTimer/`, `Tests` for `ios/FocusTimer/FocusTimerTests/`, `Assets` for `Assets.xcassets`, and `docs` for files under `specs/` other than the phase spec. Every phase also adds to the shared records (`CHANGELOG.md`, the roadmap after merging, and the "Since phase" sentences in the mission and tech stack); AGENTS.md says how to keep those from conflicting, so they are not listed. The *Depends on* and *Touches* entries are planning estimates: `$start-phase` confirms them with the user and records the final values in the phase spec.
+
+| Phase | Small deliverable | Exit check | Depends on | Touches | Saved format |
+| --- | --- | --- | --- | --- | --- |
+| I25 | Split the unit tests by area (added for parallel work) | `FocusTimerTests.swift` is split into one `*Tests.swift` file per area, with shared helpers in `TestDoubles.swift`; no test logic changes; the executed test count from the result bundle equals the count before the split. Run before parallel code phases so they stop editing one shared test file | — | Tests | no change |
+| I14 | Add in-app Done | Completed → idle; configuration survives; repeated Done is harmless | I13, I25 | TimerStore, ContentView, Tests | no change |
+| I15 | Add in-app Restart | Completed → new Focus with saved durations and new cycle identity; Break still needs confirmation | I13, I25 | TimerStore, ContentView, Tests | no change |
+| I16 | Add notification Done | Valid Break completion notification routes to Done; stale/duplicate actions are ignored | I14 | NotificationScheduler, FocusTimerApp, TimerStore, Tests | no change |
+| I17 | Add notification Restart | Valid action starts one Focus; foreground/background/relaunch paths are checked | I15, I16 | NotificationScheduler, FocusTimerApp, TimerStore, Tests | no change |
+| I18 | Show permission status and useful failure guidance | Denied alerts and scheduling errors do not block timer flow; Settings guidance is available | I25 | NotificationScheduler, FocusTimerApp, ContentView, TimerStore, Tests | no change |
+| I19 | Verify accessibility and visual resilience | Check VoiceOver, Dynamic Type, contrast, focus/order, control labels and largest supported text sizes | I14, I15, I18, I23 (checks the final screens) | ContentView | no change |
+| I20 | Supply final app icon | Complete the 1024×1024 artwork slot and verify appearance in the app/launcher | — | Assets | no change |
+| I21 | Prepare local release notes and verification checklist | Record version /build, privacy behavior, known limits, device checks, and reproducible build steps | All other forward phases (records the final behavior) | docs | no change |
+| I22 | Decide and implement launch-state policy (added after I01) | Record in the [mission](mission.md) whether each state (running, paused, waiting for Break confirmation, completed) is restored or reset on relaunch, keeping deadline recovery for running phases unless the decision changes that invariant. Behavior matches the decision for every state, with tests and a manual relaunch check; I01 observed the app reopening in waiting-for-Break. Note: whne timer is On, exit and re-start before timer ends - gets us back to phase + correct time to end. | I13, I25 | TimerStore, Tests, docs | may change |
+| I23 | Make the active timer obvious (added after I01) | Design note in the phase spec, then the SwiftUI change: Focus and Break are visually distinct in running, paused, and waiting states. User-reported simulator screenshots show the active timer is identifiable at a glance; accessibility labels name it | — | ContentView | no change |
+
+I25 changes every test file, so every phase that touches `Tests` depends on it (I16 and I17 through I14 and I15); only I20 and I23 can run alongside it. After I25, each phase puts its new tests in a test file of its own, and `Tests` counts as an overlap only when two phases change the same existing test file. Then up to three phases can run at once without sharing files: I20, one of the ready `TimerStore` phases (I14, I15, I18, I22), and I23 when that `TimerStore` phase is I22 (I14, I15, and I18 also change `ContentView`). I14 to I18 and I22 all change `TimerStore`, so they run one after another.
+
+Add focused Swift Testing unit tests (`import Testing`) with each behavior change. Use native XCTest UI tests for meaningful control/state interactions; use manual simulator and physical-device checks for OS notification behavior. Unit success does not prove delivery under system restrictions. If baseline checks fail, specify and resolve the smallest blocking defect before proceeding.
 
 ## Later decisions, not scheduled implementation
 
@@ -59,7 +73,7 @@ App Store submission, store screenshots/privacy forms, signing/distribution auto
 
 ## Completion discipline
 
-Mark each phase planned, in progress, or verified in its phase document; reference the implementing commit and actual acceptance evidence. When a phase is verified and pushed, move its row from the forward table to the completed table with the date, phase spec link, and pushed commit. Keep this roadmap's status current. Invoke `$update-changelog` manually before merging. A spec update alone is not proof that code exists or acceptance checks passed.
+Mark each phase planned, in progress, or verified in its phase document; reference the implementing commit and actual acceptance evidence. When a phase is verified and pushed, move its row from the forward table to the completed table with the date, phase spec link, and pushed commit. Do that after the merge, in a `chore/roadmap-after-Ixx` branch from `main`, while still holding the integration claim (see AGENTS.md); phase branches do not edit this roadmap, so parallel phases never conflict here. A UI phase merged after I19 repeats the I19 accessibility checks for the screens it adds or changes. Keep this roadmap's status current. Invoke `$update-changelog` manually before merging. A spec update alone is not proof that code exists or acceptance checks passed.
 
 ## References
 
