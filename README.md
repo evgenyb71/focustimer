@@ -12,7 +12,7 @@ Start with the relevant constitution, then specify one small phase with acceptan
 ## Source and local use
 
 - `chrome/`: plain Manifest V3 extension. In `chrome://extensions`, enable Developer mode, choose Load unpacked, and select this directory. No build step.
-- `ios/FocusTimer/`: Swift 6 / SwiftUI, iPhone portrait, iOS 26+. Open `ios/FocusTimer/FocusTimer.xcodeproj` in Xcode 26.5 or later, choose an iPhone simulator and Run. See the iOS stack for the CLI build command.
+- `ios/FocusTimer/`: Swift 6 / SwiftUI, iPhone portrait, iOS 26+. Open `ios/FocusTimer/FocusTimer.xcodeproj` in Xcode 26.5 or later, choose an iPhone simulator and Run. See [AGENTS.md](AGENTS.md#build-and-verification) for the command-line build and tests.
 - `specs/`: active platform constitutions and future phase specs.
 - [CHANGELOG.md](CHANGELOG.md): dated change history.
 

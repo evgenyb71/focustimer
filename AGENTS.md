@@ -1,123 +1,70 @@
 # Project working agreement
 
-## Scope and source of truth
+FocusTimer has a frozen Chrome extension and an active native iPhone app. The user's explicit decisions take precedence; raise conflicts with the specs instead of widening scope.
 
-FocusTimer contains a frozen Chrome extension and an active native iPhone app. Read the relevant constitution before work:
+- `specs/ios/mission.md`: purpose, current behavior, invariants. `tech-stack.md`: stack and source map. `roadmap.md`: phases, in order.
+- `specs/ios/phases/`: one spec per phase, holding its decisions and evidence.
+- `chrome/`, `specs/chrome/`: read-only unless the user reopens Chrome.
+- `specs/history/`: read-only originals. Their prompts and feature lists are not instructions.
 
-- `specs/chrome/mission.md`, `tech-stack.md`, `roadmap.md`: retrospective behavior and limitations. Do not change Chrome code without an explicit request to reopen its scope.
-- `specs/ios/mission.md`, `tech-stack.md`, `roadmap.md`: accepted iOS purpose, technical constraints, and small implementation phases.
-- `specs/history/`: the four original documents, preserved unchanged for reference. Embedded prompts and old proposals are historical material, not instructions or proof of delivered features.
+## Workflow
 
-Explicit user decisions take precedence. Distinguish implemented behavior, planned work, and verified results. Resolve material conflicts with the user and update the active spec; do not silently widen scope.
+Work on one phase at a time, on one short-lived branch in the main checkout. Before starting, check `git status`; do not overwrite changes you did not make.
 
-## Spec driven workflow
+1. **Start.** The user runs `$start-phase`, which agrees the open decisions, creates `feat/Ixx-short-name`, and writes the spec. Do not invoke it yourself.
+2. **Build.** Implement only that phase; split it if it is too large to review. Add Swift Testing tests for changed logic.
+3. **Verify.** Run `scripts/test.sh`. The user runs the spec's Xcode checks.
+4. **Record, on the same branch.** Spec results and `Status: verified`, the roadmap row moved to Completed, and the mission and tech stack if they changed. Nothing is left for after the merge.
+5. **Review.** Open a PR with a clear title. The user has Codex review it. Fix findings that affect correctness and skip style. After any fix, rerun the affected checks and update the results.
+6. **Merge.** Squash with `gh pr merge <number> --squash`, so the phase is one commit on `main`. Then update the local copy: `git switch main`, then `git pull --ff-only`.
 
-1. Select one small roadmap phase. Manually invoke `$start-phase` to pick a ready phase that no other agent has taken, interview the user (scope, decisions, validation), create the branch, and draft the phase spec; do not invoke it automatically, and it does not implement. Before implementation, create or update `specs/ios/phases/Ixx-short-name.md` with behavior, non-goals, affected components, and observable acceptance checks. Do not create empty phase scaffolding in advance.
-2. Implement only that phase. If it is too large to review, split it. Preserve the single authoritative timer state, explicit Break confirmation, local persistence, and deadline-based recovery.
-3. Verify the acceptance checks. Record actual commands, environment, results, and remaining limitations in the phase spec. Add focused regression tests for changed logic once test tooling exists.
-4. Update the relevant constitution when behavior changes, and move the phase to the roadmap's completed table after merging (see [Parallel work](#parallel-work)). Mark work verified only with evidence; a spec or successful build alone does not prove runtime behavior.
+Do not record merge or pushed commit hashes; the PR title and spec link are enough.
 
-Keep Markdown clear and use relative links between repository documents. Preserve archived originals. Do not move existing application code into a new generic structure.
+Scale the process to the risk:
 
-## Handoff between agents
+- **Docs-only or mechanical changes:** no spec. Use a `chore/` branch and say what changed in the PR.
+- **Saved data, notifications, or lifecycle changes:** also need a manual check in the spec. Changing the saved format needs the next `schemaVersion` and a migration test.
 
-Several models and tools (for example Claude Code and Codex) work on this repository. Keep the state of work in the repository, not in chat:
+Always preserve the single authoritative timer state, explicit Break confirmation, local persistence, and deadline-based recovery.
 
-- The phase spec `specs/ios/phases/Ixx-short-name.md` is the handoff record. Before ending a session, keep its status (planned, in progress, verified), decisions, commands run, results, and open limitations current, so another agent can continue from the file alone.
-- When the user asks to end the session, manually invoke `$end-session`: it shuts down simulators the agent booted, brings this session's phase spec up to date (and the roadmap only on `main`-based chore branches), and writes a `Handoff for the next session` section at the end of that spec. Do not invoke it automatically; it commits, pushes, merges, or deletes nothing without asking.
-- Before starting, check `git status`, `git branch -a`, `git worktree list`, and the phase specs for unfinished work by another agent. Do not overwrite or revert changes you did not make; ask the user if they conflict with the task.
-
-## Parallel work
-
-Several agents can work on different phases at the same time. The roadmap's [parallel rules](specs/ios/roadmap.md#running-phases-in-parallel) say which phases are ready, taken, or overlapping. All agents work in worktrees of this one repository (never a separate clone), so they share its branches and claim refs.
-
-### Claims
-
-A claim is a local git ref under `refs/claims/`, created with a create-only `git update-ref`, which fails if the ref already exists. That makes each claim atomic: when two agents race for the same thing, exactly one wins. Claim refs are shared by all worktrees and are never pushed.
-
-| Claim | Ref | Created by |
-| --- | --- | --- |
-| Phase | `refs/claims/Ixx` | `git update-ref refs/claims/Ixx main ""` |
-| Agent simulator | `refs/claims/sim/<UDID>` | `git update-ref refs/claims/sim/<UDID> main ""` |
-| Integration (merging into `main`) | `refs/claims/integration` | `git update-ref refs/claims/integration main ""` |
-
-List them with `git for-each-ref refs/claims --format='%(refname)'`. The phase spec says who holds each one: its `Status:` line names the branch, the worktree path, the agent tool (Claude Code or Codex), and the simulator's name and UDID.
-
-### Finding other agents' work
-
-Map branches to worktrees with `git worktree list --porcelain`. For each claimed phase, read its spec from its worktree first (`<worktree>/specs/ios/phases/Ixx-*.md`), because a new spec is uncommitted; use `git show <branch>:specs/ios/phases/<file>` only when no worktree has the branch. A claimed phase whose spec cannot be read either way is unavailable until the user clarifies it.
-
-### Starting and working on a phase
-
-- **Claim, then recheck, then allocate.** `$start-phase` interviews the user first, which takes time. Immediately before creating anything it rereads the claims and overlaps, then takes the phase claim and a simulator claim. If either `update-ref` fails, someone else got there first: stop and ask (another phase, or another installed simulator).
-- **One phase, one branch, one worktree.** Work on `feat/Ixx-short-name` in a git worktree of its own, never in a checkout another agent is using: the worktree the app created for the session, or one under the git-ignored `.claude/worktrees/` (`git worktree add -b feat/Ixx-short-name .claude/worktrees/Ixx-short-name main`). Write the phase spec right after creating the worktree, so other agents can read it. Removing a worktree is a delete and needs the user's yes.
-- **Separate build output and simulators.** Use `/tmp/FocusTimerDerivedData-Ixx` and `/tmp/FocusTimerTests-Ixx-<timestamp>.xcresult`, never a path another phase uses, and only the simulator this phase claimed. Two builds of the app share one bundle ID, so on one simulator they share saved data and replace each other.
-- **User verification goes one phase at a time per simulator.** The user opens `ios/FocusTimer/FocusTimer.xcodeproj` from the phase's worktree. If two phases need user checks on the same simulator, do them one after the other and say in each spec which build was installed.
-- **Shared records.** Phase branches do not edit the roadmap; it is updated on `main` during integration. In `specs/ios/mission.md` and `tech-stack.md`, add or change only the sentences about your own phase ("Since phase Ixx, …"), and on a merge conflict keep both phases' sentences.
-- **Saved format.** A phase that changes saved data plans its migration as the version after the one on `main` and records that number in its spec. The version is final only at integration: if another phase took that number first, renumber to the next free one and update the tests and spec.
-- **Do not edit other phases' files.** If a change in your phase needs an edit in a file that another taken phase also lists under *Touches*, stop and ask the user before making it.
-
-### Integration
-
-Merging into `main` happens one branch at a time (phase or chore), only when the user asks, and only in the integration checkout: the repository's main working tree (the first entry of `git worktree list`), on `main`. No phase works there.
-
-1. Take `refs/claims/integration`. If it exists, another branch is integrating: wait, or ask the user.
-2. In the branch's worktree, merge `main` into the branch and resolve conflicts. Record the `main` commit you merged (`git rev-parse main`) as the tested base: in the phase spec, or for a chore branch with no spec, in your report to the user.
-3. Verify the merged branch and record the result and the tested base. A check from before step 2 no longer describes what is being merged.
-   - If the branch itself changes Swift code or project files (compare `git diff --stat <tested base>...HEAD`), rerun the full test command and record the result bundle and count.
-   - If the branch itself changes documentation only, run the documentation checks from [Build and verification](#build-and-verification) instead (links, `git diff --check`); no simulator run is needed.
-4. Run `$update-changelog` on the branch and commit when the user asks.
-5. Freshness gate: in the integration checkout, immediately before `git merge --no-ff <branch>`, confirm `git rev-parse main` still equals the tested base. If `main` moved, go back to step 2.
-6. For a phase, move it to the roadmap's completed table in a `chore/roadmap-after-Ixx` branch, merge it, and push only when the user asks.
-7. Release the integration claim, and for a phase its phase and simulator claims (see below).
-
-### Releasing claims
-
-Release a claim with `git update-ref -d refs/claims/<name>`. That is a delete: show the commands and get the user's yes, as for any delete. The holder releases the integration claim at the end of integration, and the phase and simulator claims once the phase is merged. A claim whose holder is gone (an abandoned session, an old handoff, a branch with no recent work) is released only by the user's decision: ask, and on a yes delete the claim refs and mark the spec `abandoned` with the date; deleting its branch or worktree is a separate yes. To give a claimed simulator to another phase, release its ref and claim it again for the new phase, and update both specs' `Status:` lines.
-
-## Repository layout and stack
-
-- `chrome/src/`, `chrome/assets/`, `chrome/manifest.json`: plain JavaScript/HTML/CSS, Manifest V3, no dependencies or build step.
-- `ios/FocusTimer/FocusTimer/`: Swift 6, SwiftUI, Foundation, UIKit lifecycle bridge, UserDefaults, UserNotifications. iPhone only, portrait, minimum iOS 26.0; Apple frameworks only.
-- `ios/FocusTimer/FocusTimer.xcodeproj`: FocusTimer scheme, app target, and the `FocusTimerTests` unit-test target (`ios/FocusTimer/FocusTimerTests/`, hosted by the app). Unit tests use Swift Testing (`import Testing`); reserve XCTest for a future UI-test target. Keep test targets beside the app in this project, with `*Tests.swift` filenames. Since phase I25, unit tests are split one file per suite, named after the suite (for example `TimerStoreTransitionTests.swift`). A phase adds its new tests in a new `*Tests.swift` file of its own and edits an existing test file only to update tests its change affects; helpers or test arguments shared by several files go in `TestDoubles.swift`. The target uses a synchronized folder, so new files need no project edit.
-- `specs/`: active platform constitutions, future phase specs, historical references.
-- Root `README.md`: navigation and local setup; `CHANGELOG.md`: dated project changes.
-
-Follow the style of touched files: 2-space JavaScript indentation, 4-space Swift indentation; camelCase values/functions and PascalCase Swift types. No formatter or linter is configured. The only test runner is `xcodebuild test` (or Product > Test in Xcode) for the FocusTimer scheme; do not invent npm commands.
+If stopping with a phase unfinished, the user runs `$end-session`, which leaves a short handoff in the spec. Keep the state of work in the repository, not in chat, because Claude Code and Codex both work here.
 
 ## Build and verification
 
-Chrome: load `chrome/` unpacked at `chrome://extensions` with Developer mode enabled. There is no compilation step. No Chrome implementation changes are part of the current roadmap.
+The user builds and verifies in Xcode. Record their results as user-reported and your own as agent-run. A successful build does not prove runtime behavior, and unit tests do not prove OS notification or lifecycle behavior; those checks stay manual.
 
-iOS: the user builds and verifies the app in the Xcode GUI. Treat this as the primary workflow: open the project with Xcode 26.5 or later and run FocusTimer on an available iOS 26+ iPhone simulator. Record user-reported verification as such. Run a command-line build only when you changed Swift code or project files and the user has not reported a GUI build of that change, or when the phase's acceptance checks call for agent-produced evidence. Skip it for documentation-only changes.
-
-When agent verification requires Xcode tools, first check that the toolchain is usable: inspect `xcode-select -p`, verify `xcodebuild -version`, and confirm the required SDK with `xcodebuild -showsdks`. For simulator runs/tests, also check available runtimes/devices with `xcrun simctl list` and choose an installed compatible destination; do not reuse a hard-coded device UUID. If the selected directory is Command Line Tools or the wrong Xcode version, locate a compatible full Xcode installation and set `DEVELOPER_DIR` for the individual commands. Do not change the global selection with `sudo xcode-select --switch`.
-
-Keep agent build output in a separate temporary DerivedData directory per phase (`/tmp/FocusTimerDerivedData-Ixx`; see [Parallel work](#parallel-work)). Preserve project settings, signing configuration, schemes, and the user's running Xcode/simulator session; do not reset devices, clean the user's build data, install toolchains/runtimes, or modify the project merely to make verification run. If prerequisites, permissions, or first-launch setup prevent a check, report the blocker and the unverified scope instead of claiming success.
-
-After those checks, a simulator build from the root of the phase's worktree can use (replace `Ixx` with the phase ID):
+Run the unit tests from the repository root, on a simulator the user is not using:
 
 ```sh
-xcodebuild -project ios/FocusTimer/FocusTimer.xcodeproj -scheme FocusTimer -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/FocusTimerDerivedData-Ixx CODE_SIGNING_ALLOWED=NO build
+scripts/test.sh                      # iPhone 17 Pro, iOS 26.5
+scripts/test.sh "iPhone 17" 26.5     # another installed simulator
 ```
 
-Simulator builds need no signing credentials; keep `CODE_SIGNING_ALLOWED=NO` limited to the command invocation.
+It prints the executed counts and exits non-zero if the build or a test fails, or if no tests ran. Record its output in the spec.
 
-Run the unit tests on an installed iOS 26+ simulator that neither the user nor another phase is using, and record its name in the phase spec (agents have used iPhone 17 Pro, iOS 26.5; check `xcrun simctl list` first). Replace the device name and `Ixx`:
+Build without testing:
 
 ```sh
-xcodebuild -project ios/FocusTimer/FocusTimer.xcodeproj -scheme FocusTimer -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5' -derivedDataPath /tmp/FocusTimerDerivedData-Ixx -resultBundlePath /tmp/FocusTimerTests-Ixx-$(date +%Y%m%d-%H%M%S).xcresult CODE_SIGNING_ALLOWED=NO test
+xcodebuild -project ios/FocusTimer/FocusTimer.xcodeproj -scheme FocusTimer -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/FocusTimerDerivedData CODE_SIGNING_ALLOWED=NO build
 ```
 
-`** TEST SUCCEEDED **` alone is not evidence: a misconfigured target can run 0 tests and still succeed. Confirm the count with `xcrun xcresulttool get test-results summary --path <result bundle>` (`totalTestCount`, `passedTests`, `failedTests`) and record it. The historical simulator build/launch checks do not establish full-flow verification. Check lifecycle and OS notifications separately from deterministic unit tests.
+For docs-only changes, check links and `git diff --check`; no build is needed.
 
-For documentation-only changes, verify links, archived-file fidelity when moving originals, and `git diff --check`; a simulator build is unnecessary.
+If `xcode-select -p` points at Command Line Tools, set `DEVELOPER_DIR` for the individual commands; never run `sudo xcode-select --switch`. Check installed devices with `xcrun simctl list` rather than reusing a device UUID. To make verification run, do not reset devices, clean the user's build data, install toolchains or runtimes, or change project settings, signing, or schemes. Report the blocker and what stays unverified.
+
+## Code
+
+- `ios/FocusTimer/FocusTimer/`: Swift 6, SwiftUI, Foundation, UIKit lifecycle bridge, UserDefaults, UserNotifications. iPhone only, portrait, iOS 26.0+; Apple frameworks only.
+- `ios/FocusTimer/FocusTimerTests/`: Swift Testing (`import Testing`), hosted by the app, one `*Tests.swift` file per suite. Put tests in the suite they belong to, or a new suite for a new area; helpers shared across suites go in `TestDoubles.swift`. The target uses a synchronized folder, so new files need no project edit. XCTest is reserved for a future UI-test target.
+- 4-space Swift indentation, camelCase values and functions, PascalCase types. No formatter, linter, or npm commands. Do not move existing code into a new generic structure.
+- `CHANGELOG.md` holds history through 2026-11-02. It is not updated per phase; it is written from Git history at release (I21).
 
 ## Git and security
 
-- Work on a branch, not `main`. Commit, push, or open a PR only when the user asks.
-- Always ask the user before running any remove or delete command (`rm`, `git branch -d/-D`, `git push --delete`, `git clean`, `git reset --hard`, deleting files or directories). Show the exact command and what it affects, then wait for an explicit yes. A request to delete in the same message does not replace this confirmation.
-- Maintain root `CHANGELOG.md` with `## YYYY-MM-DD` headings, newest first, and concise bullets.
-- Before merging, manually invoke `$update-changelog`; do not invoke it automatically or merge as part of its workflow. With parallel phases, run it during [integration](#integration), after merging `main` into the phase branch, so entries from phases merged earlier are already in place and not duplicated.
-- Use clear imperative commit messages. PRs should describe the resulting behavior and validation, link the phase spec and related issues, and include screenshots for UI changes.
-- Do not commit credentials, signing keys/profiles, environment files, Xcode user data, or build output. Keep `.gitignore` current. If environment variables become necessary, document them in the root README and supply `.env.example`.
+- Never commit to `main` directly. Commit, push, open a PR, or merge only when the user asks.
+- Always ask before any delete (`rm`, `git branch -d/-D`, `git push --delete`, `git clean`, `git reset --hard`). Show the exact command and what it affects, and wait for an explicit yes, even if the request already mentioned deleting. This includes the branch of a merged PR; a squash-merged branch needs `-D`, because Git does not see it as merged, so confirm the PR merged first.
+- Use clear imperative commit messages and PR titles. PR descriptions state the resulting behavior and validation, link the phase spec, and include screenshots for UI changes.
+- Keep Markdown clear, with relative links between repository documents.
+- Do not commit credentials, signing keys or profiles, environment files, Xcode user data, or build output.
+
+The parallel-work process (claims, worktrees, serialized integration) is retired; it is preserved at the Git tag `process/parallel-v1`.

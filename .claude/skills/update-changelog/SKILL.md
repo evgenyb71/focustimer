@@ -1,12 +1,12 @@
 ---
 name: update-changelog
-description: Manually create or update the repository-root CHANGELOG.md from Git history and current branch changes before merging, with dated headings and concise bullets.
+description: Manually create or update the repository-root CHANGELOG.md from Git history, normally at release, with dated headings and concise bullets.
 disable-model-invocation: true
 ---
 
 # Update Changelog
 
-Maintain `CHANGELOG.md` in the repository root. The user invokes this explicitly, usually before merging. Never run it on your own initiative.
+Maintain `CHANGELOG.md` in the repository root. The user invokes this explicitly, normally at release (I21); it is not run per phase. Never run it on your own initiative.
 
 ## Inspect the changes
 
@@ -14,9 +14,8 @@ Maintain `CHANGELOG.md` in the repository root. The user invokes this explicitly
 2. **No changelog yet:** examine every commit reachable from `HEAD`:
    `git log HEAD --no-merges --date=short --format='%h %ad %s'`
    Group substantive changes by commit author date and include every date that has any. Read commit bodies and diffs where the subject is unclear. Never invent dates.
-3. **Changelog exists:** keep all existing entries. Find the target branch (the user's choice, else the default branch, normally `main`) and inspect commits and the diff from the merge base to `HEAD`. Also inspect staged, unstaged, and relevant untracked work meant for the merge. If already on the target branch, inspect the commits since the last commit that touched `CHANGELOG.md` (`git log --no-merges --date=short --format='%h %ad %s' "$(git log -1 --format=%H -- CHANGELOG.md)..HEAD"`), then check them against existing entries. Ask about the target or scope only if the answer would materially change the entries.
+3. **Changelog exists:** keep all existing entries. On any branch, inspect the commits since the last commit that touched `CHANGELOG.md` (`git log --no-merges --date=short --format='%h %ad %s' "$(git log -1 --format=%H -- CHANGELOG.md)..HEAD"`), so phases already merged since that update are covered. Also inspect staged, unstaged, and relevant untracked work meant for the merge, then check all of it against existing entries. Ask about the scope only if the answer would materially change the entries.
 4. Use local history; do not fetch unless asked. Do not trust the newest heading date as a coverage marker, because several updates can land on one day. Compare the actual changes with the existing bullets.
-5. Parallel branches: other phases may have merged into the target since this branch forked. Check with `git log --oneline HEAD..<target>`. If the target has commits this branch lacks, stop and tell the user to merge the target into this branch first, as step 2 of the Integration steps in `AGENTS.md` (do not merge it yourself), so that their changelog entries are already present and this run adds only this branch's changes under the current date heading.
 
 ## Write the entries
 
