@@ -18,6 +18,8 @@ Work on one phase at a time, on one short-lived branch in the main checkout. Bef
 5. **Review.** Open a PR with a clear title. The user has Codex review it. Fix findings that affect correctness and skip style. After any fix, rerun the affected checks and update the results.
 6. **Merge.** Squash with `gh pr merge <number> --squash`, so the phase is one commit on `main`. Then update the local copy: `git switch main`, then `git pull --ff-only`.
 
+When the user asks Codex to post a GitHub PR review or review comment, start the body with `**Codex review**` so readers can identify the reviewer even if GitHub shows the user's account as the author.
+
 Do not record merge or pushed commit hashes; the PR title and spec link are enough.
 
 Scale the process to the risk:
