@@ -1,42 +1,31 @@
 # iOS mission
 
-Status: accepted direction on 2026-10-16; baseline reviewed against `6e00429`. Future requirements below are planned, not implemented.
-
 ## Purpose and boundaries
 
-Deliver a small, reliable offline iPhone timer for Focus followed by an explicitly confirmed Break. Maintain correct remaining time across suspension and relaunch using persisted deadlines and local notifications. The app must remain usable when notifications are denied; sound and delivery timing are subject to system settings.
+A small, reliable offline iPhone timer for Focus followed by an explicitly confirmed Break. Remaining time stays correct across suspension and relaunch using persisted deadlines and local notifications. The app stays usable when notifications are denied; sound and delivery timing are subject to system settings.
 
-Retain native SwiftUI, iPhone-only portrait presentation, and iOS 26 minimum. No accounts, analytics, cloud sync, network backend, shared cross-platform code, or Chrome changes. App Store delivery is a later possibility, not a committed release target. Custom sound remains optional and outside the planned baseline.
+Native SwiftUI, iPhone-only portrait, iOS 26 minimum. No accounts, analytics, cloud sync, network backend, shared cross-platform code, or Chrome changes. App Store delivery is a later possibility, not a committed target.
 
-## Implemented baseline
+## Current behavior
 
-- Configurable Focus and Break; defaults are one minute each. UI uses whole-minute steps: Focus 1–240 minutes, Break 1–120 minutes. Since [I07](phases/I07-enforce-invariants.md), the store rounds saved and started durations to whole minutes and clamps them to the same ranges, which the UI reads from shared constants. On launch, saved timer state that breaks the invariants below is repaired, and the status line says so.
-- Flow: `idle → runningA → waitingForAConfirm → runningB → completed`. Pause is a flag on either running phase. Break never starts automatically after Focus. Since [I13](phases/I13-completed-state.md), a finished Break enters a saved `completed` phase that keeps the cycle ID and survives relaunch; until Done (I14) and Restart (I15) exist, Start Focus begins a new cycle from completed and Cancel returns to idle, and durations can be edited while completed.
-- Start, Start Break, pause/resume, and cancel/reset; duration controls are enabled only in idle and, since [I13](phases/I13-completed-state.md), in completed; they are disabled while a phase runs, is paused, or waits for Break confirmation. Cancel retains saved configuration.
-- Codable configuration and runtime state in UserDefaults; running phases use absolute Date deadlines and paused phases use remaining seconds. Configuration edits persist when Focus starts. Since [I08](phases/I08-schema-versioning.md), saved data carries a schema version, and records saved before versioning are migrated at launch with their settings and timer state kept. Since [I09](phases/I09-recover-saved-records.md), a record that cannot be read is replaced with defaults (config) or idle (state) with the same notice, the other record is kept, and an unsupported saved version is replaced on the first save.
-- Foreground countdown updates once per second; launch and foreground activation reconcile expired deadlines. Since [I12](phases/I12-expiry-clock-edges.md), pausing at or after expiry completes the phase instead of pausing; after a backward clock jump a running deadline more than the phase's length away is moved to now + that length (no notice); and a saved paused time longer than the phase is clamped at launch with the correction notice. A forward jump completes the phase on the next reconcile and never skips Break confirmation.
-- Local completion notifications with default sound; Focus notification “OK” opens the app and requests Break. Pending requests are removed on pause/cancel. Since [I10](phases/I10-cycle-identity.md), each Focus → Break cycle has a saved cycle ID that completion notifications carry, and OK starts Break only when its ID matches the current cycle; an OK from an earlier cycle, without an ID, or repeated after Break started changes nothing. Since [I11](phases/I11-clean-up-alerts.md), delivered alerts are removed once they no longer match the timer: starting Break removes the Focus alert, Cancel and a new Focus remove all, and launch or activation keeps the Focus alert only while waiting for Break and the Break alert only while Break runs or, since I13, while completed.
-- Warm card-based UI, native symbols and accessibility labels for pause/cancel. Final app icon artwork is missing. Since [I24](phases/I24-end-states.md), the status card has a distinct presentation at each end: Focus end (waiting for Break confirmation) is amber with a cup symbol, "Focus complete", and a Start Break button; Break end is green with a checkmark, "Cycle complete", and a Start Focus button. Since I13 the Break end is the saved completed state (I24 used a transient flag until then).
+- **Durations:** defaults are one minute each. Whole-minute steps: Focus 1–240 minutes, Break 1–120 minutes. Saved and started durations are rounded and clamped to the same ranges. They can be edited only in idle and completed, and persist when Focus starts.
+- **Flow:** `idle → runningA → waitingForAConfirm → runningB → completed`. Pause is a flag on either running phase. Break never starts automatically. Until Done and Restart exist, Start Focus begins a new cycle from completed. Cancel returns to idle from any phase and keeps the configuration.
+- **Saved data:** configuration and timer state are saved locally with a schema version. Running phases save absolute deadlines; paused phases save remaining seconds. Older versions migrate at launch and keep their data. Invalid saved state is repaired with a correction notice. An unreadable record is replaced with defaults or idle, with the same notice, and the other record is kept. A newer or unreadable version loads defaults and is replaced on the first save.
+- **Time:** the countdown updates once per second in the foreground. Launch and activation reconcile expired deadlines. Pausing at or after expiry completes the phase. After a backward clock jump, a deadline more than the phase's length away moves to now + that length, with no notice. A forward jump completes the phase on the next reconcile and never skips Break confirmation. A saved paused time longer than the phase is clamped at launch with the notice.
+- **Notifications:** completion alerts use the default sound. Each Focus → Break cycle has a saved cycle ID that alerts carry. The Focus alert's OK opens the app and starts Break only for the matching cycle; a stale, missing, or repeated action changes nothing. Pending requests are removed on pause and cancel. Delivered alerts are removed once they no longer match the timer: starting Break removes the Focus alert, and Cancel or a new Focus removes all. Launch and activation keep the Focus alert only while waiting for Break, and the Break alert only while Break runs or the cycle is completed.
+- **UI:** warm card-based design with native symbols and accessibility labels for pause and cancel. Focus end is amber with a cup, "Focus complete", and Start Break. Break end is green with a checkmark, "Cycle complete", and Start Focus. The final app icon is missing.
 
-The archived status reports a simulator build, installation, launch, and initial-screen screenshot check. Full flow, lifecycle, and notifications are not recorded as manually verified. No new runtime verification is claimed by this migration.
+Not yet verified: behavior on a physical device, and the deferred suspension checks from [I02](phases/I02-exercise-lifecycle-notifications.md).
 
-## Required direction
+## Still to build
 
-1. Verify the existing behavior before extending it, and add deterministic tests using injectable time, storage, and notification boundaries.
-2. Validate persisted invariants, introduce schema migration, and recover invalid state safely while preserving valid configuration.
-3. Make transitions and notification actions safe under duplicates and stale cycles. Cancel and transitions must invalidate obsolete pending and delivered notifications.
-4. Introduce a durable `completed` state. After Break, offer Done (idle) and Restart (new Focus using saved durations), both in-app and through notifications. Break must still require explicit confirmation on each cycle.
-5. Provide notification-permission guidance, then check accessibility and produce final icon artwork and local release documentation.
+Done (idle) and Restart (new Focus using saved durations) after Break, in-app and through notifications; notification-permission guidance; accessibility checks; final icon; local release documentation. See the [roadmap](roadmap.md).
 
-## Behavioral invariants and acceptance
+## Invariants
 
-- At most one phase is active. An unpaused running phase has a deadline and no saved paused duration; a paused phase has positive remaining time and no deadline. Idle, waiting, and completed states have neither.
-- A delayed launch or callback performs only the applicable transition; it does not skip the user's Break confirmation or replay missed ticks.
-- Repeated/stale actions cannot start extra phases or change a later cycle. Done and Restart remain available after relaunch in completed state.
-- Pause at or after expiry reconciles completion rather than adding time. Define and test wall-clock jump behavior while retaining wall-clock deadlines as the baseline.
-- Keep one-minute defaults and whole-minute UI ranges unless explicitly revised. Invalid stored durations cannot bypass the agreed bounds.
-- Denied alerts do not block in-app completion or actions. Do not depend on continuous background execution for correctness.
-
-## References
-
-[Stack](tech-stack.md), [small-phase roadmap](roadmap.md), [archived iPhone status](../history/focustimer_ios_spec.md), [original product/technical specification](../history/FOCUSTIMER_SPEC.md). The original prompt establishes the Done/Restart intent; it does not prove implementation.
+- At most one phase is active. An unpaused running phase has a deadline and no saved paused duration; a paused phase has positive remaining time and no deadline. Idle, waiting, and completed have neither.
+- A delayed launch or callback performs only the applicable transition; it does not skip the user's Break confirmation or replay missed ticks. Break requires explicit confirmation on every cycle.
+- Repeated or stale actions cannot start extra phases or change a later cycle. Done and Restart remain available after relaunch in completed.
+- Pause at or after expiry completes the phase rather than adding time. Deadlines remain wall-clock.
+- Invalid stored durations cannot bypass the agreed bounds. One-minute defaults and whole-minute ranges stay unless explicitly revised.
+- Denied alerts do not block in-app completion or actions. Correctness does not depend on continuous background execution.
