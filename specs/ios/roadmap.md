@@ -6,7 +6,6 @@ Work from the top. The user can reorder or split phases; note why in the phase s
 
 | Phase | Deliverable | Exit check |
 | --- | --- | --- |
-| I14 | Add in-app Done | Completed → idle; configuration survives; repeated Done is harmless |
 | I15 | Add in-app Restart | Completed → new Focus with saved durations and new cycle identity; Break still needs confirmation |
 | I16 | Add notification Done | Valid Break completion notification routes to Done; stale/duplicate actions are ignored |
 | I17 | Add notification Restart | Valid action starts one Focus; foreground/background/relaunch paths are checked |
@@ -39,3 +38,4 @@ Each spec holds the evidence and limitations. The app before I01 is in Git histo
 | I13 | Saved completed state | [I13](phases/I13-completed-state.md) |
 | I24 | Distinct Focus-end and Break-end presentation | [I24](phases/I24-end-states.md) |
 | I25 | Unit tests split into one file per suite | [I25](phases/I25-split-unit-tests.md) |
+| I14 | In-app Done from completed, which saves the durations; × hidden there | [I14](phases/I14-in-app-done.md) |

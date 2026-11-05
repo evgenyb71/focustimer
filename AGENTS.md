@@ -12,7 +12,7 @@ FocusTimer has a frozen Chrome extension and an active native iPhone app. The us
 Work on one phase at a time, on one short-lived branch in the main checkout. Before starting, check `git status`; do not overwrite changes you did not make.
 
 1. **Start.** The user runs `$start-phase`, which agrees the open decisions, creates `feat/Ixx-short-name`, and writes the spec. Do not invoke it yourself.
-2. **Build.** Implement only that phase; split it if it is too large to review. Add Swift Testing tests for changed logic.
+2. **Build.** Implement only that phase; split it if it is too large to review. Add Swift Testing tests for changed logic. Tick each item in the spec's Plan as soon as it is done, and only then, through the remaining steps too.
 3. **Verify.** Run `scripts/test.sh`. The user runs the spec's Xcode checks.
 4. **Record, on the same branch.** Spec results and `Status: verified`, the roadmap row moved to Completed, and the mission and tech stack if they changed. Nothing is left for after the merge.
 5. **Review.** Open a PR with a clear title. The user has Codex review it. Fix findings that affect correctness and skip style. After any fix, rerun the affected checks and update the results.
