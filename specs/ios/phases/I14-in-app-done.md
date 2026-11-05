@@ -85,4 +85,9 @@ User-reported, 2026-11-05:
 - Cmd+U: reported "done and correct"; the summary line with the count was not included.
 - Manual check: reported "all good". The user did not list the steps or the simulator individually.
 
+Codex review, posted on the PR, 2026-11-05: recommended merging from a correctness perspective, with its own `scripts/test.sh` run at total 147, passed 147, failed 0. It had two documentation notes:
+
+- The tech stack's `cycleID` note did not mention Done. Fixed; docs only, so no test rerun.
+- UI changes need a screenshot. Agent-run on iPhone 17 Pro, iOS 26.5, with a seeded completed state: the screen shows "Cycle complete", Start Focus, and Done below it, with no ×. The file is kept outside the repository, for the user to attach to the PR.
+
 Remaining limitations: behavior on a physical device; VoiceOver and Dynamic Type for the new button (I19).
