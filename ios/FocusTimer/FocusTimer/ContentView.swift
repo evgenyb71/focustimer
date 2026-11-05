@@ -26,6 +26,16 @@ struct ContentView: View {
                     .frame(maxWidth: .infinity)
                     .disabled(!timer.canStart)
                     .accessibilityIdentifier("primaryTimerButton")
+                    if timer.canFinish {
+                        Button("Done") {
+                            timer.done()
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(timer.endState?.accent)
+                        .controlSize(.large)
+                        .frame(maxWidth: .infinity)
+                        .accessibilityIdentifier("doneButton")
+                    }
                 }
                 .padding(20)
             }
@@ -50,12 +60,14 @@ struct ContentView: View {
                 }
                 .accessibilityLabel(timer.state.paused ? "Resume timer" : "Pause timer")
             }
-            Button {
-                timer.cancel()
-            } label: {
-                Image(systemName: "xmark")
+            if timer.canCancel {
+                Button {
+                    timer.cancel()
+                } label: {
+                    Image(systemName: "xmark")
+                }
+                .accessibilityLabel("Cancel and reset")
             }
-            .accessibilityLabel("Cancel and reset")
         }
         .buttonStyle(.bordered)
     }

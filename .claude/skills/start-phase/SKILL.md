@@ -34,10 +34,11 @@ Run `git switch -c feat/Ixx-short-name`, then write `specs/ios/phases/Ixx-short-
 - **Goal:** the behavior and the roadmap exit check.
 - **Decisions:** what the user decided, and any choice worth revisiting.
 - **Non-goals.**
+- **Plan:** a Markdown checkbox (`- [ ]`) for each implementation step, plus the workflow steps through recording results and the PR. All start unticked.
 - **Checks:** agent-run (`scripts/test.sh`, when Swift or project files change) and user-reported Xcode checks, with what stays unverified.
 - **Results:** empty until verified. Later it holds the `scripts/test.sh` output, user-reported checks, review findings, and remaining limitations.
 
-Do not restate the invariants, list files, or write a task list unless the phase spans several sessions.
+Do not restate the invariants or list files.
 
 ## 4. Finish
 

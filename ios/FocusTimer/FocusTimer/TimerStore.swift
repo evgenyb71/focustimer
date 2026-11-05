@@ -8,7 +8,7 @@ final class TimerStore: ObservableObject {
         case runningA
         case waitingForAConfirm
         case runningB
-        /// Break has ended; the cycle is finished until the user starts a new Focus or cancels.
+        /// Break has ended; the cycle is finished until the user starts a new Focus or presses Done.
         case completed
     }
 
@@ -178,6 +178,9 @@ final class TimerStore: ObservableObject {
     var canEditDurations: Bool { state.phase == .idle || state.phase == .completed }
     var canStart: Bool { state.phase == .idle || state.phase == .waitingForAConfirm || state.phase == .completed }
     var canPause: Bool { state.phase == .runningA || state.phase == .runningB }
+    var canFinish: Bool { state.phase == .completed }
+    /// A finished cycle ends with Done, so Cancel is not offered in completed.
+    var canCancel: Bool { state.phase != .completed }
 
     var endState: EndState? {
         switch state.phase {
@@ -290,6 +293,22 @@ final class TimerStore: ObservableObject {
     func cancel() {
         state = TimerState()
         noticeMessage = nil
+        notifications.cancelAllPendingCompletions()
+        notifications.removeAllDeliveredCompletions()
+        persistState()
+        updateDisplayedTime()
+    }
+
+    /// Ends a finished cycle: saves the durations and returns to idle. In any other phase, including
+    /// after an earlier Done, it does nothing.
+    func done() {
+        guard canFinish else { return }
+
+        configuration = configuration.normalized
+        persistConfiguration()
+        state = TimerState()
+        noticeMessage = nil
+        // Like Cancel: a request can outlive the state (see `startFocus()`).
         notifications.cancelAllPendingCompletions()
         notifications.removeAllDeliveredCompletions()
         persistState()

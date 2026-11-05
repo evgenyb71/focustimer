@@ -35,7 +35,7 @@ Things the code does not make obvious:
 
 - `TimerStore` is the single owner of transitions. Time, storage, and notifications go through three small injected boundaries, so tests use doubles for all of them. Keep these small; do not add a framework. The app delegate's category setup and authorization request remain static.
 - `schemaVersion` is read before decoding; a missing key means version 0. Migrations run step by step (`migrations`). A step can change no records and only raise the version, which makes older builds leave newer data alone.
-- `cycleID` is created on Focus start and kept through completed; it is removed on Cancel, and a new Focus replaces it.
+- `cycleID` is created on Focus start and kept through completed; it is removed on Cancel and Done, and a new Focus replaces it.
 - Notification IDs `focusComplete` and `breakComplete` identify alerts for removal, not cycles. The cycle is in `userInfo["cycleID"]`.
 - The deadline cap uses the current configuration. If an unreadable `config` was replaced with defaults while a longer phase ran, that phase shortens to the default length.
 - iOS can suspend the process, so no background timer is assumed. Persisted deadlines reconcile on return, and notification delivery does not update suspended in-memory state.
