@@ -43,7 +43,7 @@ Tick an item only when it is done.
 - [x] User: run Cmd+U and the manual check; record both in Results as user-reported.
 - [x] Update the [mission](../mission.md) for Done, × in completed, and when durations are saved.
 - [x] Set `Status: verified` and move the roadmap row to Completed.
-- [ ] Open the PR; fix correctness findings from the Codex review and rerun the affected checks.
+- [x] Open the PR; fix correctness findings from the Codex review and rerun the affected checks.
 
 ## Checks
 
