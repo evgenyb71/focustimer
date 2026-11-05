@@ -87,7 +87,7 @@ Record and review:
 - [x] Once the reset is built, update the mission's saved-data and notification rules for launch, and remove the reset from "Still to build".
 - [x] Update the [tech stack](../tech-stack.md) design notes for `cycleID` and the launch reset.
 - [x] Set `Status: verified` and move the I15 row to Completed.
-- [ ] Open the PR; fix correctness findings from the Codex review and rerun the affected checks.
+- [x] Open the PR; fix correctness findings from the Codex review and rerun the affected checks.
 
 ## Checks
 
@@ -140,7 +140,7 @@ PASSED
 
 That is the earlier 147 tests plus 9 in the new `TimerStoreRestartTests`. Three existing tests in `TimerStoreEndStateTests` changed, and only their expected title and message text. That suite keeps the checks of the completed title and message, and of Start and Start Break. `TimerStoreRestartTests` also covers Restart clearing a correction notice, which the Checks list did not name.
 
-The tests cover the store, not the view. Screenshot, agent-run on iPhone 17 Pro, iOS 26.5, with a seeded completed state: "Cycle complete" shows the new message, Restart, and Done below it, with no ×. The file is kept outside the repository, for the user to attach to the PR.
+The tests cover the store, not the view. Screenshot, agent-run on iPhone 17 Pro, iOS 26.5, with a seeded completed state: "Cycle complete" shows the new message, Restart, and Done below it, with no ×. The file is kept outside the repository; the user attached it to the PR.
 
 User-reported, 2026-11-05:
 
@@ -175,3 +175,9 @@ User-reported, 2026-11-05:
 - Step 6, the expanded OK button after a close, run after the user found the button: Break runs, as the user reported ("Yes, Break runs"). This is the first check of OK after a close; [I11](I11-clean-up-alerts.md) checked it from a suspended app. The check was on the same simulator as the screenshot, as far as reported.
 
 Remaining limitations: behavior on a physical device; iOS itself ending a suspended app; VoiceOver and Dynamic Type for the renamed button (I19).
+
+### Review
+
+Codex review, posted on the PR, 2026-11-05: recommended merging from a correctness perspective, with no blocking findings, and its own `scripts/test.sh` run at total 176, passed 176, failed 0. It had one documentation note: the mission said a plain alert tap after a close opens "Focus complete", which holds only when Focus ended while closed. Fixed by stating both cases; docs only, so no test rerun.
+
+The user attached the "Cycle complete" and launch-reset screenshots to the PR.
