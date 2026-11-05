@@ -6,11 +6,9 @@ Work from the top. The user can reorder or split phases; note why in the phase s
 
 | Phase | Deliverable | Exit check |
 | --- | --- | --- |
-| I15 | Add in-app Restart | Completed → new Focus with saved durations and new cycle identity; Break still needs confirmation |
-| I16 | Add notification Done | Valid Break completion notification routes to Done; stale/duplicate actions are ignored |
-| I17 | Add notification Restart | Valid action starts one Focus; foreground/background/relaunch paths are checked |
+| I16 | Add notification Done | Valid Break completion notification routes to Done; stale/duplicate actions are ignored, including an action after a launch reset (I15) |
+| I17 | Add notification Restart | Valid action starts one Focus; foreground/background/relaunch paths are checked, including an action after a launch reset (I15) |
 | I18 | Show permission status and useful failure guidance | Denied alerts and scheduling errors do not block timer flow; Settings guidance is available |
-| I22 | Decide and implement launch-state policy | Record in the [mission](mission.md) whether each state (running, paused, waiting for Break confirmation, completed) is restored or reset on relaunch, keeping deadline recovery for running phases unless the decision changes that invariant. Behavior matches the decision for every state, with tests and a manual relaunch check; I01 observed the app reopening in waiting-for-Break. Note: when timer is On, exit and re-start before timer ends - gets us back to phase + correct time to end |
 | I23 | Make the active timer obvious | Design note in the phase spec, then the SwiftUI change: Focus and Break are visually distinct in running, paused, and waiting states. User-reported simulator screenshots show the active timer is identifiable at a glance; accessibility labels name it |
 | I20 | Supply final app icon | Complete the 1024×1024 artwork slot and verify appearance in the app/launcher |
 | I19 | Verify accessibility and visual resilience (after the UI phases above) | Check VoiceOver, Dynamic Type, contrast, focus/order, control labels and largest supported text sizes |
@@ -39,3 +37,4 @@ Each spec holds the evidence and limitations. The app before I01 is in Git histo
 | I24 | Distinct Focus-end and Break-end presentation | [I24](phases/I24-end-states.md) |
 | I25 | Unit tests split into one file per suite | [I25](phases/I25-split-unit-tests.md) |
 | I14 | In-app Done from completed, which saves the durations; × hidden there | [I14](phases/I14-in-app-done.md) |
+| I15 | In-app Restart, and the launch-state policy (absorbed I22): working states restored, finished states reset | [I15](phases/I15-in-app-restart.md) |

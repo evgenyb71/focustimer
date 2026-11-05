@@ -59,12 +59,16 @@ struct TimerStoreDoneTests {
     }
 
     @Test func doneClearsACorrectionNotice() {
-        if let state = try? JSONEncoder().encode(TimerStore.TimerState(phase: .completed)),
+        // A Break that ended while closed reaches completed; the unreadable configuration adds the notice.
+        let saved = TimerStore.TimerState(phase: .runningB, endTimestamp: clock.now.addingTimeInterval(-1), cycleID: UUID())
+        if let state = try? JSONEncoder().encode(saved),
            let version = try? JSONEncoder().encode(TimerStore.currentSchemaVersion) {
             store.setData(state, forKey: "state")
+            store.setData(Data("not json".utf8), forKey: "config")
             store.setData(version, forKey: "schemaVersion")
         }
         let timer = makeTimer()
+        #expect(timer.state.phase == .completed)
         #expect(timer.statusMessage == TimerStore.repairNotice)
 
         timer.done()
@@ -176,8 +180,13 @@ struct TimerStoreDoneTests {
 
     // MARK: Relaunch
 
-    @Test func doneWorksAfterARelaunchIntoCompleted() {
-        _ = makeCompleted()
+    @Test func doneWorksAfterBreakExpiredWhileClosed() {
+        let timer = makeTimer()
+        timer.startFocus()
+        clock.advance(by: 60)
+        timer.reconcileWithCurrentTime()
+        timer.startBreak()
+        clock.advance(by: 60)
 
         let relaunched = makeTimer()
         #expect(relaunched.state.phase == .completed)

@@ -375,13 +375,13 @@ extension TimerStoreTransitionTests {
         ))
     }
 
-    @Test func relaunchWhileWaitingStaysWaiting() {
+    @Test func relaunchWhileWaitingResetsAndKeepsTheDurations() {
         _ = makeWaitingForBreak()
         clock.advance(by: 10_000)
 
         let relaunched = relaunch()
 
-        #expect(relaunched.state.ignoringCycle == TimerStore.TimerState(phase: .waitingForAConfirm))
+        #expect(relaunched.state == TimerStore.TimerState())
         #expect(relaunched.configuration == savedDurations)
     }
 
