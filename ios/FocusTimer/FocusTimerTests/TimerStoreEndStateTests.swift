@@ -63,8 +63,8 @@ struct TimerStoreEndStateTests {
         #expect(timer.state.phase == .completed)
         #expect(timer.endState == .breakComplete)
         #expect(timer.endHeadline == "Cycle complete")
-        #expect(timer.statusMessage == "Start another Focus when you're ready.")
-        #expect(timer.primaryButtonTitle == "Start Focus")
+        #expect(timer.statusMessage == "Restart for another Focus, or press Done to finish.")
+        #expect(timer.primaryButtonTitle == "Restart")
     }
 
     @Test func breakEndShowsWhenActivationReconcilesAFinishedBreak() {
@@ -126,15 +126,16 @@ struct TimerStoreEndStateTests {
 
         #expect(timer.state.phase == .completed)
         #expect(timer.endState == .breakComplete)
-        #expect(timer.primaryButtonTitle == "Start Focus")
+        #expect(timer.primaryButtonTitle == "Restart")
     }
 
-    @Test func relaunchKeepsTheBreakEnd() {
+    @Test func relaunchClearsTheBreakEnd() {
         _ = makeBreakFinished()
 
         let relaunched = makeTimer()
 
-        #expect(relaunched.endState == .breakComplete)
-        #expect(relaunched.statusMessage == "Start another Focus when you're ready.")
+        #expect(relaunched.endState == nil)
+        #expect(relaunched.statusMessage == "Set durations and press Start.")
+        #expect(relaunched.primaryButtonTitle == "Start")
     }
 }

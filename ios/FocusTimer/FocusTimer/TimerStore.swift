@@ -160,6 +160,14 @@ final class TimerStore: ObservableObject {
             if configuration != savedConfiguration || state != savedState || configurationUnreadable || stateUnreadable {
                 noticeMessage = Self.repairNotice
             }
+            // An end screen the user already had when the app closed does not come back. Going by the saved
+            // phase, before reconciling, lets a phase that expired while closed still show its end screen once.
+            if savedState.phase == .waitingForAConfirm || savedState.phase == .completed {
+                state = TimerState()
+                persistState()
+                notifications.cancelAllPendingCompletions()
+                notifications.removeAllDeliveredCompletions()
+            }
         } else {
             // Records from a newer or unreadable version are not interpreted and are left untouched at
             // launch. The first save replaces them and writes the current version.
@@ -213,7 +221,7 @@ final class TimerStore: ObservableObject {
         if let noticeMessage { return noticeMessage }
         return switch state.phase {
         case .idle: "Set durations and press Start."
-        case .completed: "Start another Focus when you're ready."
+        case .completed: "Restart for another Focus, or press Done to finish."
         case .runningA: state.paused ? "Resume to continue Focus." : "Break Timer will wait for confirmation."
         case .waitingForAConfirm: "Take a break when you're ready."
         case .runningB: state.paused ? "Resume to continue Break." : "Waiting for completion."
@@ -223,7 +231,7 @@ final class TimerStore: ObservableObject {
     var primaryButtonTitle: String {
         switch endState {
         case .focusComplete: "Start Break"
-        case .breakComplete: "Start Focus"
+        case .breakComplete: "Restart"
         case nil: "Start"
         }
     }

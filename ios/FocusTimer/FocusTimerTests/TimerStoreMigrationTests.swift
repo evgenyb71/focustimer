@@ -56,7 +56,20 @@ struct TimerStoreMigrationTests {
 
     // MARK: Unversioned records
 
-    @Test(arguments: UnversionedState.allCases)
+    @Test func unversionedWaitingStateResetsAndKeepsTheConfiguration() {
+        seed(configuration: savedConfiguration, state: state(.waitingForBreak))
+        let savedConfig = store.values["config"]
+
+        let (timer, _) = load()
+
+        #expect(timer.state == TimerStore.TimerState())
+        #expect(timer.configuration == savedConfiguration)
+        #expect(store.values["config"] == savedConfig)
+        #expect(savedVersion() == TimerStore.currentSchemaVersion)
+        #expect(timer.statusMessage != TimerStore.repairNotice)
+    }
+
+    @Test(arguments: [UnversionedState.idle, .runningFocus, .runningBreak, .pausedFocus, .pausedBreak])
     func unversionedRecordsKeepTheirValues(_ unversioned: UnversionedState) {
         seed(configuration: savedConfiguration, state: state(unversioned))
         let savedConfig = store.values["config"]

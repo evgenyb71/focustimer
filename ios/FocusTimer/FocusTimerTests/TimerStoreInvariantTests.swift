@@ -135,10 +135,9 @@ struct TimerStoreInvariantTests {
 
     // MARK: Stray fields
 
-    @Test(arguments: [TimerStore.Phase.idle, .waitingForAConfirm])
-    func strayTimingFieldsAreRemovedWhenNotRunning(_ phase: TimerStore.Phase) {
+    @Test func strayTimingFieldsAreRemovedWhenIdle() {
         seed(state: TimerStore.TimerState(
-            phase: phase,
+            phase: .idle,
             endTimestamp: clock.now.addingTimeInterval(30),
             paused: true,
             remainingSeconds: 10
@@ -146,9 +145,24 @@ struct TimerStoreInvariantTests {
 
         let timer = load()
 
-        #expect(timer.state.ignoringCycle == TimerStore.TimerState(phase: phase))
-        #expect(savedState()?.ignoringCycle == TimerStore.TimerState(phase: phase))
+        #expect(timer.state == TimerStore.TimerState())
+        #expect(savedState() == TimerStore.TimerState())
         #expect(notifications.pendingCalls.isEmpty)
+        #expect(timer.statusMessage == TimerStore.repairNotice)
+    }
+
+    @Test func aWaitingStateWithStrayTimingFieldsResetsWithNotice() {
+        seed(state: TimerStore.TimerState(
+            phase: .waitingForAConfirm,
+            endTimestamp: clock.now.addingTimeInterval(30),
+            paused: true,
+            remainingSeconds: 10
+        ))
+
+        let timer = load()
+
+        #expect(timer.state == TimerStore.TimerState())
+        #expect(savedState() == TimerStore.TimerState())
         #expect(timer.statusMessage == TimerStore.repairNotice)
     }
 

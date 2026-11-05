@@ -90,8 +90,9 @@ struct TimerStoreCycleTests {
         #expect(timer.state.cycleID != firstCycle)
     }
 
-    @Test func relaunchKeepsTheCycleID() {
+    @Test func relaunchKeepsTheCycleIDOfARunningPhase() {
         let timer = makeWaitingForBreak()
+        timer.startBreak()
         let cycleID = timer.state.cycleID
 
         let relaunched = makeTimer()
@@ -190,7 +191,18 @@ struct TimerStoreCycleTests {
 
     // MARK: Migration 1 → 2
 
-    @Test(arguments: [UnversionedState.runningFocus, .runningBreak, .pausedFocus, .pausedBreak, .waitingForBreak])
+    @Test func version1WaitingStateMigratesThenResetsWithoutNotice() {
+        seed(state: encoded(TimerStore.TimerState(phase: .waitingForAConfirm)), version: 1)
+
+        let timer = makeTimer()
+
+        #expect(timer.state == TimerStore.TimerState())
+        #expect(savedState() == timer.state)
+        #expect(store.values["schemaVersion"] == (try? JSONEncoder().encode(TimerStore.currentSchemaVersion)))
+        #expect(timer.statusMessage != TimerStore.repairNotice)
+    }
+
+    @Test(arguments: [UnversionedState.runningFocus, .runningBreak, .pausedFocus, .pausedBreak])
     func version1ActiveStateGetsACycleIDWithoutNotice(_ fixture: UnversionedState) {
         let deadline = clock.now.addingTimeInterval(30)
         let state: TimerStore.TimerState = switch fixture {

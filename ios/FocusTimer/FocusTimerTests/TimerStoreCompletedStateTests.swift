@@ -100,38 +100,33 @@ struct TimerStoreCompletedStateTests {
 
     // MARK: Relaunch and repair
 
-    @Test func relaunchRestoresCompletedWithoutNotice() {
+    @Test func relaunchResetsCompletedWithoutNotice() {
         _ = makeCompleted()
-        let saved = store.values
 
         let relaunched = makeTimer()
 
-        #expect(relaunched.state.phase == .completed)
-        #expect(relaunched.state.endTimestamp == nil)
-        #expect(relaunched.state.cycleID != nil)
-        #expect(relaunched.endState == .breakComplete)
+        #expect(relaunched.state == TimerStore.TimerState())
+        #expect(relaunched.endState == nil)
         #expect(relaunched.statusMessage != TimerStore.repairNotice)
-        #expect(store.values == saved)
+        #expect(savedState() == relaunched.state)
     }
 
-    @Test func completedWithStrayTimingFieldsIsRepaired() {
-        let cycleID = UUID()
-        seed(state: encoded(TimerStore.TimerState(phase: .completed, endTimestamp: clock.now.addingTimeInterval(30), paused: true, remainingSeconds: 10, cycleID: cycleID)))
+    @Test func completedWithStrayTimingFieldsResetsWithNotice() {
+        seed(state: encoded(TimerStore.TimerState(phase: .completed, endTimestamp: clock.now.addingTimeInterval(30), paused: true, remainingSeconds: 10, cycleID: UUID())))
 
         let timer = makeTimer()
 
-        #expect(timer.state == TimerStore.TimerState(phase: .completed, cycleID: cycleID))
+        #expect(timer.state == TimerStore.TimerState())
         #expect(savedState() == timer.state)
         #expect(timer.statusMessage == TimerStore.repairNotice)
     }
 
-    @Test func completedWithoutACycleIDGetsOne() {
+    @Test func completedWithoutACycleIDResetsWithNotice() {
         seed(state: encoded(TimerStore.TimerState(phase: .completed)))
 
         let timer = makeTimer()
 
-        #expect(timer.state.phase == .completed)
-        #expect(timer.state.cycleID != nil)
+        #expect(timer.state == TimerStore.TimerState())
         #expect(savedState() == timer.state)
         #expect(timer.statusMessage == TimerStore.repairNotice)
     }
@@ -139,13 +134,13 @@ struct TimerStoreCompletedStateTests {
     // MARK: Schema version 3
 
     @Test func version2RecordsMigrateToVersion3Unchanged() {
-        let state = encoded(TimerStore.TimerState(phase: .waitingForAConfirm, cycleID: UUID()))
+        let state = encoded(TimerStore.TimerState(phase: .runningA, endTimestamp: clock.now.addingTimeInterval(30), cycleID: UUID()))
         seed(state: state, version: 2)
         let mark = store.writtenKeys.count
 
         let timer = makeTimer()
 
-        #expect(timer.state.phase == .waitingForAConfirm)
+        #expect(timer.state.phase == .runningA)
         #expect(store.values["state"] == state)
         #expect(Array(store.writtenKeys.dropFirst(mark)) == ["schemaVersion"])
         #expect(store.values["schemaVersion"] == (try? JSONEncoder().encode(3)))
@@ -225,16 +220,12 @@ struct TimerStoreCompletedStateTests {
         #expect(Array(notifications.calls.dropFirst(mark)) == [.cancel(phase: .runningB)])
     }
 
-    @Test func activationAndLaunchInCompletedKeepTheBreakAlert() {
+    @Test func activationInCompletedKeepsTheBreakAlert() {
         let timer = makeCompleted()
         let mark = notifications.calls.count
 
         timer.activate()
-        _ = makeTimer()
 
-        #expect(Array(notifications.calls.dropFirst(mark)) == [
-            .removeDelivered(phase: .runningA),
-            .removeDelivered(phase: .runningA),
-        ])
+        #expect(Array(notifications.calls.dropFirst(mark)) == [.removeDelivered(phase: .runningA)])
     }
 }

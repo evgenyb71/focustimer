@@ -7,7 +7,7 @@ Offline Focus → confirmation → Break timers for Chrome and iPhone. This repo
 | Chrome | [Mission](specs/chrome/mission.md) | [Stack](specs/chrome/tech-stack.md) | [Retrospective](specs/chrome/roadmap.md) |
 | iOS | [Mission](specs/ios/mission.md) | [Stack](specs/ios/tech-stack.md) | [Small implementation phases](specs/ios/roadmap.md) |
 
-Start with the relevant constitution, then specify one small phase with acceptance checks before implementation. Follow [AGENTS.md](AGENTS.md) for the working agreement. Done/Restart and other roadmap capabilities are planned, not currently implemented.
+Start with the relevant constitution, then specify one small phase with acceptance checks before implementation. Follow [AGENTS.md](AGENTS.md) for the working agreement. Notification Done and Restart and other roadmap capabilities are planned, not currently implemented.
 
 ## Source and local use
 

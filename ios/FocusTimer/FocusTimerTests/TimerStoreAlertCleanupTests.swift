@@ -209,7 +209,8 @@ struct TimerStoreAlertCleanupTests {
         #expect(Array(notifications.calls.dropFirst(mark)) == expectedCleanup(phase))
     }
 
-    @Test(arguments: CleanupPhase.allCases)
+    /// A saved waiting state resets at launch instead; `TimerStoreLaunchPolicyTests` covers its alerts.
+    @Test(arguments: [CleanupPhase.idle, .runningFocus, .pausedFocus, .runningBreak, .pausedBreak])
     func launchRemovesAlertsThatDoNotMatchThePhase(_ phase: CleanupPhase) {
         _ = reach(phase)
         let mark = notifications.calls.count
