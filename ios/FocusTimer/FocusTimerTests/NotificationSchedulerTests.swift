@@ -17,20 +17,21 @@ struct NotificationSchedulerTests {
         #expect(NotificationScheduler.cycleID(in: content.userInfo) == cycleID)
     }
 
-    @Test func breakAlertOffersDoneWithTheNewWording() throws {
+    @Test func breakAlertOffersRestartAndDoneWithTheNewWording() throws {
         let cycleID = UUID()
 
         let content = try #require(NotificationScheduler.content(for: .runningB, cycleID: cycleID))
 
         #expect(content.title == "Cycle complete")
-        #expect(content.body == "Choose Done to finish, or open the app to restart.")
+        #expect(content.body == "Choose Restart for another Focus, or Done to finish.")
         #expect(content.categoryIdentifier == NotificationScheduler.breakCategory)
         #expect(NotificationScheduler.cycleID(in: content.userInfo) == cycleID)
     }
 
     @Test func theTwoAlertsUseDifferentCategoriesAndActions() {
         #expect(NotificationScheduler.focusCategory != NotificationScheduler.breakCategory)
-        #expect(NotificationScheduler.startBreakAction != NotificationScheduler.doneAction)
+        let actions = [NotificationScheduler.startBreakAction, NotificationScheduler.doneAction, NotificationScheduler.restartAction]
+        #expect(Set(actions).count == actions.count)
     }
 
     @Test func alertWithoutACycleIDCarriesNone() throws {

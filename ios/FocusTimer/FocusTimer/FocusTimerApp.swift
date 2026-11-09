@@ -52,6 +52,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, @preconcurrency UNUser
             TimerStore.shared.startBreakFromNotification(cycleID: cycleID)
         case NotificationScheduler.doneAction:
             TimerStore.shared.doneFromNotification(cycleID: cycleID)
+        case NotificationScheduler.restartAction:
+            TimerStore.shared.restartFromNotification(cycleID: cycleID)
         default:
             // A plain tap only opens the app.
             break

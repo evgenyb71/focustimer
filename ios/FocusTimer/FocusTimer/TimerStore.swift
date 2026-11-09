@@ -305,6 +305,18 @@ final class TimerStore: ObservableObject {
         done()
     }
 
+    /// Starts a new Focus from the Break notification's Restart, only when the action belongs to the current
+    /// cycle and that cycle is complete. An action from an earlier cycle, without an ID, after a launch reset,
+    /// or repeated after Restart does nothing.
+    func restartFromNotification(cycleID: UUID?) {
+        // Checked before reconciling, as in `doneFromNotification`.
+        guard let cycleID, cycleID == state.cycleID else { return }
+        reconcileWithCurrentTime()
+        // `startFocus()` also starts from idle, so the completed check keeps Restart to a finished cycle.
+        guard state.phase == .completed else { return }
+        startFocus()
+    }
+
     func pauseOrResume() {
         guard canPause else { return }
         noticeMessage = nil
