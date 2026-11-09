@@ -44,7 +44,7 @@ Tick an item only when it is done.
 - [x] User: run Cmd+U and the manual alert check; record both in Results as user-reported.
 - [x] Update the [mission](../mission.md) notification rules and "Still to build", and the [tech stack](../tech-stack.md) note on categories.
 - [x] Set `Status: verified` and move the roadmap row to Completed.
-- [ ] Open the PR; fix correctness findings from the Codex review and rerun the affected checks.
+- [x] Open the PR; fix correctness findings from the Codex review and rerun the affected checks.
 
 ## Checks
 
@@ -95,3 +95,7 @@ The README line on unimplemented features no longer lists notification Restart.
 User-reported, 2026-11-09: Cmd+U and all seven steps of the manual alert check passed ("All pass"), with short minutes on. That covers Restart from the background, after a swipe-close with the Focus alert arriving, over the open app, a leftover alert after a reset starting no Focus, and Done still working. The Cmd+U summary line with the count, the individual steps, and the simulator were not reported.
 
 Remaining limitations: behavior on a physical device; how long iOS gives a background launch, beyond what step 3 shows; Restart on the lock screen; VoiceOver for the alert actions (I19).
+
+### Review
+
+Codex review, posted on the PR, 2026-11-09: no correctness findings, and it recommends merging. It checked that Restart is registered before Done without a foreground option, that the store checks the cycle before reconciling and starts Focus only after Break completes, and that the new cycle ID stops a repeated Restart or Done from the old alert. Its own `scripts/test.sh` run passed 215 of 215. Nothing needed fixing.
