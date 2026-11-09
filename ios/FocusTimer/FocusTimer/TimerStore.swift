@@ -36,6 +36,12 @@ final class TimerStore: ObservableObject {
             }
         }
 
+        /// How long a timed phase runs when a minute lasts `secondsPerMinute` seconds. With 60 it equals
+        /// `duration(of:)`; a shorter minute exists only in Debug builds, for manual checks.
+        func runLength(of phase: Phase, secondsPerMinute: Int) -> Int? {
+            duration(of: phase).map { $0 * secondsPerMinute / 60 }
+        }
+
         private static func normalize(_ seconds: Int, to range: ClosedRange<Int>) -> Int {
             let wholeMinutes = (Double(seconds) / 60).rounded() * 60
             return Int(min(max(wholeMinutes, Double(range.lowerBound)), Double(range.upperBound)))
@@ -74,8 +80,9 @@ final class TimerStore: ObservableObject {
         }
 
         /// A paused remaining time longer than the phase's full length is shortened to that length.
-        func clampingPausedTime(to configuration: Configuration) -> TimerState {
-            guard paused, let remainingSeconds, let duration = configuration.duration(of: phase),
+        func clampingPausedTime(to configuration: Configuration, secondsPerMinute: Int = 60) -> TimerState {
+            guard paused, let remainingSeconds,
+                  let duration = configuration.runLength(of: phase, secondsPerMinute: secondsPerMinute),
                   remainingSeconds > duration else { return self }
             var state = self
             state.remainingSeconds = duration
@@ -114,7 +121,18 @@ final class TimerStore: ObservableObject {
         { _ in },
     ]
 
-    static let shared = TimerStore()
+    static let shared = TimerStore(secondsPerMinute: launchSecondsPerMinute())
+
+    /// Seconds in a minute for the app's store. Debug builds read an optional setting so that manual checks
+    /// finish quickly (`scripts/debug-minute.sh`); a missing or invalid value means 60. Release builds always
+    /// use 60 and contain neither the setting nor its key.
+    private static func launchSecondsPerMinute() -> Int {
+        #if DEBUG
+        UserDefaults.standard.integer(forKey: "debugSecondsPerMinute")
+        #else
+        60
+        #endif
+    }
 
     @Published var configuration: Configuration
     @Published private(set) var state: TimerState
@@ -130,15 +148,19 @@ final class TimerStore: ObservableObject {
     private var ticker: Timer?
     /// True when launch ignored records of a newer or unreadable schema version.
     private var versionNeedsWrite = false
+    /// How many seconds each configured minute runs for: 60, or 1–59 in a Debug build set up for quick checks.
+    let secondsPerMinute: Int
 
     init(
         clock: any Clock = SystemClock(),
         store: any KeyValueStore = UserDefaults.standard,
-        notifications: any NotificationScheduling = SystemNotificationScheduler()
+        notifications: any NotificationScheduling = SystemNotificationScheduler(),
+        secondsPerMinute: Int = 60
     ) {
         self.clock = clock
         self.store = store
         self.notifications = notifications
+        self.secondsPerMinute = (1...60).contains(secondsPerMinute) ? secondsPerMinute : 60
         if Self.migrateSavedRecords(in: store, versionKey: Self.schemaVersionKey) {
             let configurationUnreadable = Self.isUnreadable(Configuration.self, key: Self.configurationKey, in: store)
             let stateUnreadable = Self.isUnreadable(TimerState.self, key: Self.stateKey, in: store)
@@ -146,7 +168,7 @@ final class TimerStore: ObservableObject {
             let savedState = Self.decode(TimerState.self, key: Self.stateKey, from: store) ?? TimerState()
             let normalizedConfiguration = savedConfiguration.normalized
             configuration = normalizedConfiguration
-            state = savedState.repaired.clampingPausedTime(to: normalizedConfiguration)
+            state = savedState.repaired.clampingPausedTime(to: normalizedConfiguration, secondsPerMinute: self.secondsPerMinute)
             if configuration != savedConfiguration || configurationUnreadable {
                 persistConfiguration()
             }
@@ -254,12 +276,12 @@ final class TimerStore: ObservableObject {
         // launch can ignore an unsupported saved version while a Break request is still scheduled.
         notifications.cancelAllPendingCompletions()
         notifications.removeAllDeliveredCompletions()
-        startPhase(.runningA, durationSeconds: configuration.durationASeconds, cycleID: UUID())
+        startPhase(.runningA, durationSeconds: runLength(of: .runningA), cycleID: UUID())
     }
 
     func startBreak() {
         guard state.phase == .waitingForAConfirm else { return }
-        startPhase(.runningB, durationSeconds: configuration.durationBSeconds, cycleID: state.cycleID ?? UUID())
+        startPhase(.runningB, durationSeconds: runLength(of: .runningB), cycleID: state.cycleID ?? UUID())
         notifications.removeDeliveredCompletion(for: .runningA)
     }
 
@@ -356,7 +378,7 @@ final class TimerStore: ObservableObject {
         }
         // After a backward clock jump the deadline can be further away than the phase is long;
         // it is moved to now + the full length, so the timer never shows more than its length.
-        if let duration = configuration.normalized.duration(of: state.phase),
+        if let duration = configuration.normalized.runLength(of: state.phase, secondsPerMinute: secondsPerMinute),
            deadline.timeIntervalSince(now) > TimeInterval(duration) {
             let capped = now.addingTimeInterval(TimeInterval(duration))
             state.endTimestamp = capped
@@ -364,6 +386,11 @@ final class TimerStore: ObservableObject {
             notifications.scheduleCompletion(for: state.phase, at: capped, now: now, cycleID: state.cycleID)
         }
         updateDisplayedTime()
+    }
+
+    /// The current configuration's run length for a timed phase; 0 for any other phase.
+    private func runLength(of phase: Phase) -> Int {
+        configuration.runLength(of: phase, secondsPerMinute: secondsPerMinute) ?? 0
     }
 
     private func startPhase(_ phase: Phase, durationSeconds: Int, cycleID: UUID) {

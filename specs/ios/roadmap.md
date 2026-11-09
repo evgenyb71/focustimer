@@ -6,7 +6,6 @@ Work from the top. The user can reorder or split phases; note why in the phase s
 
 | Phase | Deliverable | Exit check |
 | --- | --- | --- |
-| I26 | Add debug-only short durations for manual checks | Debug builds can run a minute as fewer seconds, guarded by `#if DEBUG`, so manual checks finish quickly; Release builds contain none of it. Steppers, saved durations, bounds, and the saved format stay in minutes. Unit tests keep real lengths and cover the shortened case; a user-reported manual run confirms alerts arrive at the shortened time |
 | I17 | Add notification Restart | Valid action starts one Focus; foreground/background/relaunch paths are checked, including an action after a launch reset (I15) |
 | I18 | Show permission status and useful failure guidance | Denied alerts and scheduling errors do not block timer flow; Settings guidance is available |
 | I23 | Make the active timer obvious | Design note in the phase spec, then the SwiftUI change: Focus and Break are visually distinct in running, paused, and waiting states. User-reported simulator screenshots show the active timer is identifiable at a glance; accessibility labels name it |
@@ -39,3 +38,4 @@ Each spec holds the evidence and limitations. The app before I01 is in Git histo
 | I14 | In-app Done from completed, which saves the durations; × hidden there | [I14](phases/I14-in-app-done.md) |
 | I15 | In-app Restart, and the launch-state policy (absorbed I22): working states restored, finished states reset | [I15](phases/I15-in-app-restart.md) |
 | I16 | Done on the Break alert, without opening the app; both alerts reworded | [I16](phases/I16-notification-done.md) |
+| I26 | Debug-only short minutes for manual checks, set with `scripts/debug-minute.sh`; Release unaffected | [I26](phases/I26-debug-short-durations.md) |
