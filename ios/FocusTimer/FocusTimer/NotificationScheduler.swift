@@ -8,6 +8,7 @@ enum NotificationScheduler {
     static let breakCategory = "BREAK_COMPLETE"
     nonisolated static let startBreakAction = "START_BREAK"
     nonisolated static let doneAction = "DONE"
+    nonisolated static let restartAction = "RESTART"
     /// `userInfo` key holding the cycle ID as a UUID string.
     nonisolated static let cycleIDKey = "cycleID"
 
@@ -23,11 +24,13 @@ enum NotificationScheduler {
             title: "OK",
             options: [.foreground]
         )
-        // No options: Done ends the cycle in the background without opening the app.
+        // No options: Restart and Done act in the background without opening the app. Restart comes first,
+        // as in the app.
+        let restart = UNNotificationAction(identifier: restartAction, title: "Restart", options: [])
         let done = UNNotificationAction(identifier: doneAction, title: "Done", options: [])
         UNUserNotificationCenter.current().setNotificationCategories([
             UNNotificationCategory(identifier: focusCategory, actions: [startBreak], intentIdentifiers: []),
-            UNNotificationCategory(identifier: breakCategory, actions: [done], intentIdentifiers: []),
+            UNNotificationCategory(identifier: breakCategory, actions: [restart, done], intentIdentifiers: []),
         ])
     }
 
@@ -45,7 +48,7 @@ enum NotificationScheduler {
             content.categoryIdentifier = focusCategory
         case .runningB:
             content.title = "Cycle complete"
-            content.body = "Choose Done to finish, or open the app to restart."
+            content.body = "Choose Restart for another Focus, or Done to finish."
             content.categoryIdentifier = breakCategory
         case .idle, .waitingForAConfirm, .completed:
             return nil
