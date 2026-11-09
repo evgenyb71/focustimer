@@ -150,6 +150,7 @@ struct TimerStoreRestartTests {
         #expect(timer.state.phase == .runningA)
 
         clock.advance(by: 60)
+        timer.reconcileWithCurrentTime()
         timer.startBreakFromNotification(cycleID: finishedCycle)
         #expect(timer.state.phase == .waitingForAConfirm)
 

@@ -25,7 +25,7 @@ User, 2026-11-09:
 
 Agent decisions, open to revision:
 
-- **Model:** a cycle-checked store method beside `startBreakFromNotification`. It reconciles first, ignores an action whose cycle ID does not match the current cycle, and then calls `done()`, which acts only in completed. After a launch reset there is no cycle ID, so a leftover alert's Done changes nothing and makes no notification calls.
+- **Model:** a cycle-checked store method beside `startBreakFromNotification`. It ignores an action whose cycle ID does not match the current cycle, then reconciles, then calls `done()`, which acts only in completed. The check comes first so that a rejected action cannot reconcile a newer cycle; the Codex review found the opposite order, and the OK path now uses the same order. After a launch reset there is no cycle ID, so a leftover alert's Done changes nothing and makes no notification calls.
 - **Effects:** the same as the in-app Done. The durations in memory are saved, the state becomes idle with no cycle ID, and pending and delivered alerts are removed. On a background launch, the durations in memory are the saved ones.
 - **Background launch:** when the app was closed, iOS launches it in the background to handle Done, and the launch policy applies first. A Break that ended while closed reconciles to completed, and Done then ends it. A completed state saved before the close resets at launch, and the Done is ignored. Either way the app ends idle.
 - **Action:** a new Break alert category with one action, "Done", with no foreground or authentication option. It is registered alongside the Focus category, because setting categories replaces the whole set. I17 can add Restart to the same category.
@@ -53,7 +53,7 @@ Tick an item only when it is done.
 - [x] User: run Cmd+U and the manual alert check; record both in Results as user-reported.
 - [x] Update the [mission](../mission.md) notification rules and "Still to build", and the [tech stack](../tech-stack.md) notes on categories.
 - [x] Set `Status: verified` and move the roadmap row to Completed.
-- [ ] Open the PR; fix correctness findings from the Codex review and rerun the affected checks.
+- [x] Open the PR; fix correctness findings from the Codex review and rerun the affected checks.
 
 ## Checks
 
@@ -102,3 +102,21 @@ User-reported, 2026-11-09:
 
 Remaining limitations: behavior on a physical device; how long iOS gives a background launch to handle the action; a Break alert's Done on the lock screen; VoiceOver for the alert actions (I19). Step 5 shows the same screen as a valid Done, so only the unit tests show that the stale Done was ignored.
 
+### Review
+
+Codex review, posted on the PR, 2026-11-09, with its own `scripts/test.sh` run at total 190, passed 190, failed 0:
+
+- **[P2] Validate the cycle ID before reconciling.** Fixed. `doneFromNotification` reconciled before checking the cycle. A Done from an old alert could therefore save a newer Break whose deadline had passed as completed and cancel its pending alert, or, after a backward clock jump, rewrite the newer deadline and reschedule the alert. It now checks the cycle first; reconciling keeps the cycle ID, so a valid Done after Break ends still works.
+- **The same order in the OK path, found while fixing:** `startBreakFromNotification` had the same order since I10 and [I11](I11-clean-up-alerts.md), whose spec recorded "reconcile, validate the cycle ID". A stale OK could save a newer Focus as waiting, or reschedule it after a backward jump. It now uses the same order. This changes a recorded I11 decision.
+- **Regression tests:** 5 new ones. Done from an old cycle with a newer expired Break, and after a backward jump; Done with no or an unknown ID on an expired Break; OK from an old cycle with a newer expired Focus, and after a backward jump. Each asserts no state change, no writes, and no notification calls. All 5 failed against the old order and pass with the fix.
+- **One older test updated:** the I15 Restart test that a stale OK cannot start Break in the new cycle relied on the stale OK to reconcile the new Focus. It now reconciles explicitly first, and its assertion is unchanged.
+- **Trailing blank line** at the end of this spec, flagged by `git diff --check`: fixed.
+
+Agent-run after the fixes, 2026-11-09, `scripts/test.sh` on iPhone 17 Pro, iOS 26.5:
+
+```text
+iPhone 17 Pro, iOS 26.5: total 195, passed 195, failed 0, skipped 0, expected failures 0
+PASSED
+```
+
+The manual alert check was not rerun. Valid OK and Done behave as before, because reconciling keeps the cycle ID, and the rejected cases are what the new unit tests cover. The user approved the PR without screenshots, since the change is in notifications.

@@ -110,6 +110,36 @@ struct TimerStoreNotificationDoneTests {
         expectDoneIsIgnored(timer, cycleID: oldCycle)
     }
 
+    @Test func doneFromAnEarlierCycleLeavesANewerExpiredBreakUnreconciled() {
+        let timer = makeCompleted()
+        let oldCycle = timer.state.cycleID
+        timer.done()
+        _ = makeBreakRunning(on: timer)
+        clock.advance(by: 60)
+        #expect(timer.state.phase == .runningB)
+
+        expectDoneIsIgnored(timer, cycleID: oldCycle)
+        #expect(notifications.pendingPhases.contains(.runningB))
+    }
+
+    @Test func doneFromAnEarlierCycleLeavesANewerBreakAfterABackwardClockJump() {
+        let timer = makeCompleted()
+        let oldCycle = timer.state.cycleID
+        timer.done()
+        _ = makeBreakRunning(on: timer)
+        clock.advance(by: -3_600)
+
+        expectDoneIsIgnored(timer, cycleID: oldCycle)
+    }
+
+    @Test(arguments: [nil, UUID()] as [UUID?])
+    func doneWithoutOrWithUnknownIDLeavesAnExpiredBreakUnreconciled(_ cycleID: UUID?) {
+        let timer = makeBreakRunning()
+        clock.advance(by: 60)
+
+        expectDoneIsIgnored(timer, cycleID: cycleID)
+    }
+
     @Test(arguments: [nil, UUID()] as [UUID?])
     func doneWithoutOrWithUnknownIDIsIgnored(_ cycleID: UUID?) {
         expectDoneIsIgnored(makeCompleted(), cycleID: cycleID)
