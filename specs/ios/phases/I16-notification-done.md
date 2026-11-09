@@ -120,3 +120,5 @@ PASSED
 ```
 
 The manual alert check was not rerun. Valid OK and Done behave as before, because reconciling keeps the cycle ID, and the rejected cases are what the new unit tests cover. The user approved the PR without screenshots, since the change is in notifications.
+
+Codex re-review, posted on the PR, 2026-11-09: the finding is resolved, and it recommends merging, with its own `scripts/test.sh` run at total 195, passed 195, failed 0. Its one nonblocking note, that the PR description still gave the old order and 190 tests, was fixed in the description.
