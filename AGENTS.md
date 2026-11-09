@@ -50,6 +50,14 @@ Build without testing:
 xcodebuild -project ios/FocusTimer/FocusTimer.xcodeproj -scheme FocusTimer -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/FocusTimerDerivedData CODE_SIGNING_ALLOWED=NO build
 ```
 
+For quicker manual checks in a Debug build, make each minute last fewer seconds on a simulator, then relaunch the app. Release builds ignore it.
+
+```sh
+scripts/debug-minute.sh 10                        # booted simulator: a minute lasts 10 seconds
+scripts/debug-minute.sh 10 "iPhone 18 Pro Max"    # a named simulator
+scripts/debug-minute.sh off                       # real minutes again
+```
+
 For docs-only changes, check links and `git diff --check`; no build is needed.
 
 If `xcode-select -p` points at Command Line Tools, set `DEVELOPER_DIR` for the individual commands; never run `sudo xcode-select --switch`. Check installed devices with `xcrun simctl list` rather than reusing a device UUID. To make verification run, do not reset devices, clean the user's build data, install toolchains or runtimes, or change project settings, signing, or schemes. Report the blocker and what stays unverified.
