@@ -5,7 +5,9 @@ enum NotificationScheduler {
     static let focusIdentifier = "focusComplete"
     static let breakIdentifier = "breakComplete"
     static let focusCategory = "FOCUS_COMPLETE"
+    static let breakCategory = "BREAK_COMPLETE"
     nonisolated static let startBreakAction = "START_BREAK"
+    nonisolated static let doneAction = "DONE"
     /// `userInfo` key holding the cycle ID as a UUID string.
     nonisolated static let cycleIDKey = "cycleID"
 
@@ -14,18 +16,41 @@ enum NotificationScheduler {
         (userInfo[cycleIDKey] as? String).flatMap(UUID.init(uuidString:))
     }
 
+    /// Registers both categories in one call, because setting categories replaces the whole set.
     static func configureCategories() {
-        let action = UNNotificationAction(
+        let startBreak = UNNotificationAction(
             identifier: startBreakAction,
             title: "OK",
             options: [.foreground]
         )
-        let category = UNNotificationCategory(
-            identifier: focusCategory,
-            actions: [action],
-            intentIdentifiers: []
-        )
-        UNUserNotificationCenter.current().setNotificationCategories([category])
+        // No options: Done ends the cycle in the background without opening the app.
+        let done = UNNotificationAction(identifier: doneAction, title: "Done", options: [])
+        UNUserNotificationCenter.current().setNotificationCategories([
+            UNNotificationCategory(identifier: focusCategory, actions: [startBreak], intentIdentifiers: []),
+            UNNotificationCategory(identifier: breakCategory, actions: [done], intentIdentifiers: []),
+        ])
+    }
+
+    /// The completion alert for a running phase, or nil for a phase that has none.
+    static func content(for phase: TimerStore.Phase, cycleID: UUID?) -> UNMutableNotificationContent? {
+        let content = UNMutableNotificationContent()
+        content.sound = .default
+        if let cycleID {
+            content.userInfo = [cycleIDKey: cycleID.uuidString]
+        }
+        switch phase {
+        case .runningA:
+            content.title = "Focus complete"
+            content.body = "Open the app or choose OK to start Break."
+            content.categoryIdentifier = focusCategory
+        case .runningB:
+            content.title = "Cycle complete"
+            content.body = "Choose Done to finish, or open the app to restart."
+            content.categoryIdentifier = breakCategory
+        case .idle, .waitingForAConfirm, .completed:
+            return nil
+        }
+        return content
     }
 
     static func requestAuthorization() {
@@ -44,26 +69,8 @@ protocol NotificationScheduling {
 
 struct SystemNotificationScheduler: NotificationScheduling {
     func scheduleCompletion(for phase: TimerStore.Phase, at deadline: Date, now: Date, cycleID: UUID?) {
-        let identifier: String
-        let content = UNMutableNotificationContent()
-        content.sound = .default
-        if let cycleID {
-            content.userInfo = [NotificationScheduler.cycleIDKey: cycleID.uuidString]
-        }
-
-        switch phase {
-        case .runningA:
-            identifier = NotificationScheduler.focusIdentifier
-            content.title = "Focus Timer complete"
-            content.body = "Tap OK to start Break Timer."
-            content.categoryIdentifier = NotificationScheduler.focusCategory
-        case .runningB:
-            identifier = NotificationScheduler.breakIdentifier
-            content.title = "Break Timer complete"
-            content.body = "Sequence finished."
-        case .idle, .waitingForAConfirm, .completed:
-            return
-        }
+        guard let content = NotificationScheduler.content(for: phase, cycleID: cycleID) else { return }
+        let identifier = phase == .runningA ? NotificationScheduler.focusIdentifier : NotificationScheduler.breakIdentifier
 
         let interval = max(1, deadline.timeIntervalSince(now))
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)

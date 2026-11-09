@@ -271,6 +271,15 @@ final class TimerStore: ObservableObject {
         startBreak()
     }
 
+    /// Ends a finished cycle from the Break notification's Done, only when the action belongs to the
+    /// current cycle. An action from an earlier cycle, without an ID, after a launch reset, or repeated after
+    /// Done does nothing.
+    func doneFromNotification(cycleID: UUID?) {
+        reconcileWithCurrentTime()
+        guard let cycleID, cycleID == state.cycleID else { return }
+        done()
+    }
+
     func pauseOrResume() {
         guard canPause else { return }
         noticeMessage = nil
