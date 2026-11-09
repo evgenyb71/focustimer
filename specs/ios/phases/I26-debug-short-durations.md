@@ -117,3 +117,5 @@ Agent-run after the fix:
 - With the stand-in `xcrun`, which can now fail every simulator command, the write, or the read: the 11 invalid inputs still exit 2 and write nothing, and 1–60 are written as given. `off` stores 60 whether short minutes were on, never set, or already off. While set to 10, `off` and `20` each exit 1 when every simulator command fails, when the write fails, or when the read fails; a failed write leaves the value unchanged. The previous version, with every simulator command failing, reported success with exit 0.
 - On iPhone 17 Pro, iOS 26.5: set 10 and `off` gave exit 0, and the stored value read back as 60. `off` again gave exit 0. After the simulator was shut down, `off` gave exit 1.
 - No Swift changed, so the 203-test result stands.
+
+Codex's second re-review, posted on the PR, 2026-11-09: the remaining finding is resolved, and it recommends merging. Its own mocked checks confirmed success on a matching read-back, and failure when the write fails, when the read fails, or when the old value comes back. Its one nonblocking note, that the PR description still said the script removes the value, was fixed in the description.
