@@ -9,17 +9,12 @@ key=debugSecondsPerMinute
 value=${1:-}
 device=${2:-booted}
 
+# Only plain whole numbers 1-60 (no sign, no leading zero) or "off"; matched as text, so no arithmetic can fail.
 case $value in
-    off) ;;
-    '' | *[!0-9]*)
+    off | [1-9] | [1-5][0-9] | 60) ;;
+    *)
         echo "Usage: scripts/debug-minute.sh <seconds 1-60 | off> [device]" >&2
         exit 2
-        ;;
-    *)
-        if [ "$value" -lt 1 ] || [ "$value" -gt 60 ]; then
-            echo "Seconds must be 1 to 60." >&2
-            exit 2
-        fi
         ;;
 esac
 
@@ -30,7 +25,12 @@ fi
 domain="$container/Library/Preferences/$bundle"
 
 if [ "$value" = off ]; then
+    # Deleting a value that is already absent fails, so success is judged by reading it back.
     xcrun simctl spawn "$device" defaults delete "$domain" "$key" 2>/dev/null
+    if saved=$(xcrun simctl spawn "$device" defaults read "$domain" "$key" 2>/dev/null); then
+        echo "FAILED: the setting is still $saved; short minutes are still on." >&2
+        exit 1
+    fi
     echo "Short minutes are off: a minute lasts 60 seconds. Relaunch the app."
 else
     xcrun simctl spawn "$device" defaults write "$domain" "$key" -int "$value" || exit 1

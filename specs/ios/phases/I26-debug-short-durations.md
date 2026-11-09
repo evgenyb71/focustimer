@@ -44,7 +44,7 @@ Tick an item only when it is done.
 - [x] User: run Cmd+U and the manual run; record both in Results as user-reported.
 - [x] Document the script in [AGENTS.md](../../../AGENTS.md#build-and-verification) and the [tech stack](../tech-stack.md).
 - [x] Set `Status: verified` and move the roadmap row to Completed.
-- [ ] Open the PR; fix correctness findings from the Codex review and rerun the affected checks.
+- [x] Open the PR; fix correctness findings from the Codex review and rerun the affected checks.
 
 ## Checks
 
@@ -94,3 +94,16 @@ Agent-run script and app check, on iPhone 17 Pro, iOS 26.5:
 User-reported, 2026-11-09: Cmd+U and all five steps of the manual run passed ("All pass"). The Cmd+U summary line with the count, the individual steps, and the simulator were not reported.
 
 Remaining limitations: a Release build on a physical device; the setting on a physical device, which the script does not support.
+
+### Review
+
+Codex review, posted on the PR, 2026-11-09, with its own `scripts/test.sh` run at total 203, passed 203, failed 0. It found no problems in the Swift code and two in the script:
+
+- **[P2] Report failures when clearing short minutes.** Fixed. `off` hid the error from `defaults delete` and always reported success, so a failed clear could leave short minutes on for the next check. It now reads the value back after the delete and fails if the value is still there. An already-absent value still counts as cleared.
+- **[P3] Validate the numeric input before writing.** Fixed. An overlong number made both shell comparisons error out and fall through to the write, and `010` was written and then failed the read-back. The script now matches only plain 1–60 as text, before any write.
+
+Agent-run after the fixes:
+
+- With a stand-in `xcrun`: no value, `abc`, `0`, `00`, `010`, `61`, `99`, `-5`, `+5`, ` 5`, and a 20-digit number each exit 2 and write nothing. 1, 9, 10, 59, and 60 are written as given. `off` clears a set value and succeeds when already off. A failed delete while the value is set exits 1, with "the setting is still 10". The old script, given the same failed delete, reported success with exit 0.
+- On iPhone 17 Pro, iOS 26.5: set 10, `off`, `off` again, and `010` gave exit codes 0, 0, 0, and 2.
+- No Swift changed, so the 203-test result stands. The user's manual run is not affected: it used only valid values and a successful `off`.
