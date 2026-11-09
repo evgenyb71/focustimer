@@ -20,7 +20,7 @@ Agent decisions, open to revision:
 
 - **Model:** the store takes a seconds-per-minute value when it is created, 60 by default. A phase runs for its configured whole minutes times that value. It applies wherever a duration becomes a run length: starting a phase, the deadline cap after a backward clock jump, and the paused-time clamp at launch. Configuration, Steppers, bounds, and saved values do not change.
 - **Setting:** an integer `debugSecondsPerMinute` in the app's own defaults. A missing value, or one outside 1–60, means 60. The app reads it once, when the shared store is created, so a change applies from the next launch. Release builds compile neither the reading code nor the key.
-- **Script:** `scripts/debug-minute.sh <seconds|off> [device]` writes or removes the value in the installed app's container on the booted simulator, then says to relaunch the app. It changes no project setting, scheme, or signing.
+- **Script:** `scripts/debug-minute.sh <seconds|off> [device]` writes the value in the installed app's container on the booted simulator, reads it back, and says to relaunch the app. `off` writes 60, which the app treats as real minutes, so every run ends in a verified write; see the review below. It changes no project setting, scheme, or signing.
 - **Switching during a phase:** a deadline started with real minutes is longer than the shortened length, so the next launch caps it without a notice, as after a backward clock jump; a paused time is clamped with the correction notice. Debug only, and acceptable for a testing aid.
 - **Alerts:** they are scheduled from the deadline, so they follow the shortened length with no change.
 
@@ -57,7 +57,7 @@ Agent-run: `scripts/test.sh`, with Swift Testing tests covering:
 - A deadline started with real minutes is capped to the shortened length at the next launch, without a notice.
 - The setting's value is used only from 1 to 60; missing, 0, negative, and larger values give 60.
 
-Agent-run, outside the tests: a Release build succeeds and its binary does not contain `debugSecondsPerMinute`. The script sets, reads back, and clears the value on the agent simulator.
+Agent-run, outside the tests: a Release build succeeds and its binary does not contain `debugSecondsPerMinute`. The script sets, reads back, and turns off the value on the agent simulator.
 
 User-reported, in Xcode on the iPhone 18 Pro Max simulator (iOS 27.0):
 
@@ -107,3 +107,13 @@ Agent-run after the fixes:
 - With a stand-in `xcrun`: no value, `abc`, `0`, `00`, `010`, `61`, `99`, `-5`, `+5`, ` 5`, and a 20-digit number each exit 2 and write nothing. 1, 9, 10, 59, and 60 are written as given. `off` clears a set value and succeeds when already off. A failed delete while the value is set exits 1, with "the setting is still 10". The old script, given the same failed delete, reported success with exit 0.
 - On iPhone 17 Pro, iOS 26.5: set 10, `off`, `off` again, and `010` gave exit codes 0, 0, 0, and 2.
 - No Swift changed, so the 203-test result stands. The user's manual run is not affected: it used only valid values and a successful `off`.
+
+Codex re-review, posted on the PR, 2026-11-09: the numeric finding is resolved, but one P2 remained.
+
+- **[P2] A failed read-back still looks like a successful clear.** Fixed. If the simulator shut down after the container lookup, both the delete and the read failed, and the failed read passed for a cleared setting. Codex reproduced this with a mocked lookup. Following its suggestion, `off` now writes 60 and reads it back, the same path as any other value, so the setting stays stored at 60 instead of being removed. The app treats 60 as real minutes, and the Swift tests already cover 60.
+
+Agent-run after the fix:
+
+- With the stand-in `xcrun`, which can now fail every simulator command, the write, or the read: the 11 invalid inputs still exit 2 and write nothing, and 1–60 are written as given. `off` stores 60 whether short minutes were on, never set, or already off. While set to 10, `off` and `20` each exit 1 when every simulator command fails, when the write fails, or when the read fails; a failed write leaves the value unchanged. The previous version, with every simulator command failing, reported success with exit 0.
+- On iPhone 17 Pro, iOS 26.5: set 10 and `off` gave exit 0, and the stored value read back as 60. `off` again gave exit 0. After the simulator was shut down, `off` gave exit 1.
+- No Swift changed, so the 203-test result stands.

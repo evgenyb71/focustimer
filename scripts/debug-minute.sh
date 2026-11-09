@@ -24,20 +24,23 @@ if ! container=$(xcrun simctl get_app_container "$device" "$bundle" data 2>/dev/
 fi
 domain="$container/Library/Preferences/$bundle"
 
+# "off" stores 60, which the app treats as real minutes. Writing and reading back a value makes success
+# unambiguous: a failed read can never be mistaken for a cleared setting.
+seconds=$value
+[ "$value" = off ] && seconds=60
+
+if ! xcrun simctl spawn "$device" defaults write "$domain" "$key" -int "$seconds" 2>/dev/null; then
+    echo "FAILED: could not write the setting on '$device'; it is unchanged." >&2
+    exit 1
+fi
+saved=$(xcrun simctl spawn "$device" defaults read "$domain" "$key" 2>/dev/null)
+if [ "$saved" != "$seconds" ]; then
+    echo "FAILED: read back '$saved' instead of $seconds." >&2
+    exit 1
+fi
+
 if [ "$value" = off ]; then
-    # Deleting a value that is already absent fails, so success is judged by reading it back.
-    xcrun simctl spawn "$device" defaults delete "$domain" "$key" 2>/dev/null
-    if saved=$(xcrun simctl spawn "$device" defaults read "$domain" "$key" 2>/dev/null); then
-        echo "FAILED: the setting is still $saved; short minutes are still on." >&2
-        exit 1
-    fi
     echo "Short minutes are off: a minute lasts 60 seconds. Relaunch the app."
 else
-    xcrun simctl spawn "$device" defaults write "$domain" "$key" -int "$value" || exit 1
-    saved=$(xcrun simctl spawn "$device" defaults read "$domain" "$key" 2>/dev/null)
-    if [ "$saved" != "$value" ]; then
-        echo "FAILED: read back '$saved' instead of $value." >&2
-        exit 1
-    fi
-    echo "A minute now lasts $value seconds in Debug builds on '$device'. Relaunch the app."
+    echo "A minute now lasts $seconds seconds in Debug builds on '$device'. Relaunch the app."
 fi

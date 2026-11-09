@@ -27,7 +27,7 @@ Under `ios/FocusTimer/`:
 - `FocusTimer/ContentView.swift`: durations, status, and controls, with the end-state presentation driven by `TimerStore.endState`. `Assets.xcassets`: color and icon slots.
 - `FocusTimerTests/`: one `*Tests.swift` file per suite; `TestDoubles.swift` has the fake clock, in-memory store, recording notification scheduler, and test arguments shared across suites.
 
-`scripts/test.sh` runs the unit tests and checks the executed count. `scripts/debug-minute.sh` sets or clears the Debug-only short minute on a simulator.
+`scripts/test.sh` runs the unit tests and checks the executed count. `scripts/debug-minute.sh` sets the Debug-only short minute on a simulator, or sets it back to 60 with `off`.
 
 ## Design notes
 
