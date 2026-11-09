@@ -266,9 +266,21 @@ final class TimerStore: ObservableObject {
     /// Starts Break from a Focus notification's action, only when the action belongs to the current
     /// cycle. An action from an earlier cycle, without an ID, or repeated after Break started does nothing.
     func startBreakFromNotification(cycleID: UUID?) {
-        reconcileWithCurrentTime()
+        // Checked before reconciling, as in `doneFromNotification`.
         guard let cycleID, cycleID == state.cycleID else { return }
+        reconcileWithCurrentTime()
         startBreak()
+    }
+
+    /// Ends a finished cycle from the Break notification's Done, only when the action belongs to the
+    /// current cycle. An action from an earlier cycle, without an ID, after a launch reset, or repeated after
+    /// Done does nothing.
+    func doneFromNotification(cycleID: UUID?) {
+        // Check the cycle before reconciling, so a rejected action cannot complete or reschedule a newer
+        // cycle. Reconciling keeps the cycle ID, so a matching action still finds a Break that has ended.
+        guard let cycleID, cycleID == state.cycleID else { return }
+        reconcileWithCurrentTime()
+        done()
     }
 
     func pauseOrResume() {

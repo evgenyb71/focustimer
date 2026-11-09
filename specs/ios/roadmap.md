@@ -6,7 +6,7 @@ Work from the top. The user can reorder or split phases; note why in the phase s
 
 | Phase | Deliverable | Exit check |
 | --- | --- | --- |
-| I16 | Add notification Done | Valid Break completion notification routes to Done; stale/duplicate actions are ignored, including an action after a launch reset (I15) |
+| I26 | Add debug-only short durations for manual checks | Debug builds can run a minute as fewer seconds, guarded by `#if DEBUG`, so manual checks finish quickly; Release builds contain none of it. Steppers, saved durations, bounds, and the saved format stay in minutes. Unit tests keep real lengths and cover the shortened case; a user-reported manual run confirms alerts arrive at the shortened time |
 | I17 | Add notification Restart | Valid action starts one Focus; foreground/background/relaunch paths are checked, including an action after a launch reset (I15) |
 | I18 | Show permission status and useful failure guidance | Denied alerts and scheduling errors do not block timer flow; Settings guidance is available |
 | I23 | Make the active timer obvious | Design note in the phase spec, then the SwiftUI change: Focus and Break are visually distinct in running, paused, and waiting states. User-reported simulator screenshots show the active timer is identifiable at a glance; accessibility labels name it |
@@ -38,3 +38,4 @@ Each spec holds the evidence and limitations. The app before I01 is in Git histo
 | I25 | Unit tests split into one file per suite | [I25](phases/I25-split-unit-tests.md) |
 | I14 | In-app Done from completed, which saves the durations; × hidden there | [I14](phases/I14-in-app-done.md) |
 | I15 | In-app Restart, and the launch-state policy (absorbed I22): working states restored, finished states reset | [I15](phases/I15-in-app-restart.md) |
+| I16 | Done on the Break alert, without opening the app; both alerts reworded | [I16](phases/I16-notification-done.md) |

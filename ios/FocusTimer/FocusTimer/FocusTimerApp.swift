@@ -46,8 +46,15 @@ final class AppDelegate: NSObject, UIApplicationDelegate, @preconcurrency UNUser
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
-        guard response.actionIdentifier == NotificationScheduler.startBreakAction else { return }
         let cycleID = NotificationScheduler.cycleID(in: response.notification.request.content.userInfo)
-        TimerStore.shared.startBreakFromNotification(cycleID: cycleID)
+        switch response.actionIdentifier {
+        case NotificationScheduler.startBreakAction:
+            TimerStore.shared.startBreakFromNotification(cycleID: cycleID)
+        case NotificationScheduler.doneAction:
+            TimerStore.shared.doneFromNotification(cycleID: cycleID)
+        default:
+            // A plain tap only opens the app.
+            break
+        }
     }
 }

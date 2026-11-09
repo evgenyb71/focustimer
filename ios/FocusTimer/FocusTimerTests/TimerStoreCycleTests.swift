@@ -155,6 +155,42 @@ struct TimerStoreCycleTests {
         #expect(timer.state == running)
     }
 
+    @Test func actionFromAnEarlierCycleLeavesANewerExpiredFocusUnreconciled() {
+        let timer = makeTimer()
+        timer.startFocus()
+        let oldCycle = timer.state.cycleID
+        timer.cancel()
+        timer.startFocus()
+        clock.advance(by: 60)
+        let running = timer.state
+        let writes = store.writtenKeys.count
+        let calls = notifications.calls.count
+
+        timer.startBreakFromNotification(cycleID: oldCycle)
+
+        #expect(timer.state == running)
+        #expect(store.writtenKeys.count == writes)
+        #expect(notifications.calls.count == calls)
+    }
+
+    @Test func actionFromAnEarlierCycleLeavesANewerFocusAfterABackwardClockJump() {
+        let timer = makeTimer()
+        timer.startFocus()
+        let oldCycle = timer.state.cycleID
+        timer.cancel()
+        timer.startFocus()
+        clock.advance(by: -3_600)
+        let running = timer.state
+        let writes = store.writtenKeys.count
+        let calls = notifications.calls.count
+
+        timer.startBreakFromNotification(cycleID: oldCycle)
+
+        #expect(timer.state == running)
+        #expect(store.writtenKeys.count == writes)
+        #expect(notifications.calls.count == calls)
+    }
+
     @Test(arguments: [nil, UUID()] as [UUID?])
     func actionWithoutOrWithUnknownIDIsIgnored(_ cycleID: UUID?) {
         let timer = makeWaitingForBreak()
