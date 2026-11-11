@@ -14,7 +14,7 @@ User, 2026-11-11:
 
 - **Denied status:** a one-line hint, shown only while alerts are denied, telling the user to turn on alerts in Settings. No button.
 - **Permission request:** unchanged; the app still asks at launch.
-- **Scheduling error:** if adding an alert fails while alerts are allowed, the existing notice line shows that the end-of-phase alert could not be scheduled and the app should stay open to see the end. It clears on the next transition, as the repair notice does. It is not shown when alerts are simply denied, since the hint covers that.
+- **Scheduling error:** if adding an alert fails while alerts are allowed, the existing notice line shows that the end-of-phase alert could not be scheduled and the app should stay open to see the end. It clears on the next transition, as the repair notice does, and also when the phase ends by itself. It is not shown when alerts are simply denied, since the hint covers that.
 - **Checks:** Cmd+U and the manual deny/allow check below.
 
 Agent decisions, open to revision:
@@ -77,6 +77,13 @@ iPhone 17 Pro, iOS 26.5: total 232, passed 232, failed 0, skipped 0, expected fa
 PASSED
 ```
 
+After the review fixes, agent-run, 2026-11-11, same simulator:
+
+```text
+iPhone 17 Pro, iOS 26.5: total 236, passed 236, failed 0, skipped 0, expected failures 0
+PASSED
+```
+
 New tests are in `TimerStoreAlertPermissionTests` and `NotificationSchedulerTests`. Writing `try #require(x)()` on one line crashed the Swift compiler in the test target, so the tests bind the handler first.
 
 User-reported, 2026-11-11, iPhone 18 Pro Max simulator, iOS 27.0, with `scripts/debug-minute.sh 10`:
@@ -86,3 +93,12 @@ User-reported, 2026-11-11, iPhone 18 Pro Max simulator, iOS 27.0, with `scripts/
 
 Remaining limitations: the scheduling-failure notice is covered by unit tests only. Not checked on a physical device. iOS asks only once per install, so a user who denied alerts sees only the hint and must use Settings.
 
+### Review
+
+Codex review, three P2 findings, all fixed:
+
+- **Notice stayed on the end screens.** A scheduling-failure notice survived automatic expiry, so "Focus complete" and "Cycle complete" asked the user to keep the app open. Expiry now clears that notice and keeps a repair notice. Tests cover Focus, Break, and a repair notice at launch.
+- **Add could follow a later removal.** The add ran in a deferred task while removals ran inline, so a quick Pause or Cancel could be submitted first and the old request added afterwards. The add is now submitted inline with the completion-handler call; only the failure report hops to the main actor. Unit tests cannot see this ordering, since the recording scheduler is synchronous.
+- **An older permission read could win.** Overlapping reads all published their result. Each read now carries a generation, and only the latest is applied; the previous task is also cancelled. A test returns two held reads in reverse order.
+
+User-reported after the fixes, 2026-11-11, iPhone 18 Pro Max simulator, iOS 27.0, with alerts allowed and `scripts/debug-minute.sh 10`: the Focus and Break alerts arrived with the app in the background, and pausing or cancelling a few seconds after Start meant no alert arrived. All steps passed.

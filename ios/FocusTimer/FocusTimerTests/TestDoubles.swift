@@ -85,8 +85,13 @@ final class RecordingNotificationScheduler: NotificationScheduling {
         pendingPhases.insert(phase)
     }
 
+    /// When true, each status read waits in `heldStatusReads` until the test resumes it.
+    var holdsStatusReads = false
+    private(set) var heldStatusReads: [CheckedContinuation<UNAuthorizationStatus, Never>] = []
+
     func authorizationStatus() async -> UNAuthorizationStatus {
-        status
+        guard holdsStatusReads else { return status }
+        return await withCheckedContinuation { heldStatusReads.append($0) }
     }
 
     func cancelPendingCompletion(for phase: TimerStore.Phase) {

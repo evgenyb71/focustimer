@@ -64,6 +64,25 @@ struct TimerStoreAlertPermissionTests {
         #expect(timer.alertsHint == TimerStore.alertsDeniedHint)
     }
 
+    @Test func anOlderReadFinishingLastDoesNotOverwriteANewerOne() async {
+        notifications.holdsStatusReads = true
+        let timer = TimerStore(clock: clock, store: store, notifications: notifications)
+        let launchRead = timer.alertPermissionCheck
+        timer.checkAlertPermission()
+        let newerRead = timer.alertPermissionCheck
+        while notifications.heldStatusReads.count < 2 {
+            await Task.yield()
+        }
+
+        // The newer read sees alerts turned off; the launch read's earlier snapshot returns afterwards.
+        notifications.heldStatusReads[1].resume(returning: .denied)
+        await newerRead?.value
+        notifications.heldStatusReads[0].resume(returning: .authorized)
+        await launchRead?.value
+
+        #expect(timer.alertsHint == TimerStore.alertsDeniedHint)
+    }
+
     @Test func deniedAlertsDoNotBlockAFullCycle() async {
         let timer = await makeTimer(status: .denied)
 
@@ -194,6 +213,52 @@ struct TimerStoreAlertPermissionTests {
 
         #expect(timer.noticeMessage == nil)
         #expect(timer.alertsHint == TimerStore.alertsDeniedHint)
+    }
+
+    @Test func theNoticeClearsWhenFocusEnds() async throws {
+        let timer = await makeTimer()
+        timer.startFocus()
+        let failure = try #require(notifications.failureHandlers.last)
+        failure()
+
+        clock.advance(by: 60)
+        timer.reconcileWithCurrentTime()
+
+        #expect(timer.state.phase == .waitingForAConfirm)
+        #expect(timer.noticeMessage == nil)
+        #expect(timer.statusMessage == "Take a break when you're ready.")
+    }
+
+    @Test func theNoticeClearsWhenBreakEnds() async throws {
+        let timer = await makeTimer()
+        timer.startFocus()
+        clock.advance(by: 60)
+        timer.reconcileWithCurrentTime()
+        timer.startOrConfirmBreak()
+        let failure = try #require(notifications.failureHandlers.last)
+        failure()
+
+        clock.advance(by: 60)
+        timer.reconcileWithCurrentTime()
+
+        #expect(timer.state.phase == .completed)
+        #expect(timer.noticeMessage == nil)
+    }
+
+    @Test func aRepairNoticeStaysWhenAPhaseEndsAtLaunch() async {
+        // A Focus that ended while closed reaches waiting; the unreadable configuration adds the repair notice.
+        let saved = TimerStore.TimerState(phase: .runningA, endTimestamp: clock.now.addingTimeInterval(-1), cycleID: UUID())
+        if let state = try? JSONEncoder().encode(saved),
+           let version = try? JSONEncoder().encode(TimerStore.currentSchemaVersion) {
+            store.setData(state, forKey: "state")
+            store.setData(Data("not json".utf8), forKey: "config")
+            store.setData(version, forKey: "schemaVersion")
+        }
+
+        let timer = await makeTimer()
+
+        #expect(timer.state.phase == .waitingForAConfirm)
+        #expect(timer.noticeMessage == TimerStore.repairNotice)
     }
 
     @Test func theNoticeClearsOnTheNextTransition() async throws {

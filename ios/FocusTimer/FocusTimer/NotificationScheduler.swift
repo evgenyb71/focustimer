@@ -108,14 +108,11 @@ struct SystemNotificationScheduler: NotificationScheduling {
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: [identifier])
-        Task {
-            do {
-                try await center.add(request)
-            } catch {
-                if NotificationScheduler.isReportableFailure(error) {
-                    onFailure()
-                }
-            }
+        // Submitted inline, so a later Pause or Cancel removal reaches the center after this add.
+        // The handler runs on a background queue; only the report hops to the main actor.
+        center.add(request) { @Sendable error in
+            guard let error, NotificationScheduler.isReportableFailure(error) else { return }
+            Task { @MainActor in onFailure() }
         }
     }
 

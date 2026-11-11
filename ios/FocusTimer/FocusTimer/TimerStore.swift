@@ -145,6 +145,8 @@ final class TimerStore: ObservableObject {
     @Published private(set) var alertsDenied = false
     /// The latest permission read, kept so tests can wait for it.
     private(set) var alertPermissionCheck: Task<Void, Never>?
+    /// Counts permission reads, so only the latest one is applied.
+    private var alertPermissionGeneration = 0
 
     private static let configurationKey = "config"
     private static let stateKey = "state"
@@ -389,9 +391,15 @@ final class TimerStore: ObservableObject {
     var alertsHint: String? { alertsDenied ? Self.alertsDeniedHint : nil }
 
     /// Reads the permission to alert and updates the denied hint. Timer flow never waits for it.
+    /// Reads can overlap (launch, the prompt's answer, activation); one that finishes after a newer read
+    /// started is dropped, so an older snapshot cannot overwrite a newer one.
     func checkAlertPermission() {
+        alertPermissionGeneration += 1
+        let generation = alertPermissionGeneration
+        alertPermissionCheck?.cancel()
         alertPermissionCheck = Task {
             let status = await notifications.authorizationStatus()
+            guard generation == alertPermissionGeneration else { return }
             alertsDenied = NotificationScheduler.isDenied(status)
         }
     }
@@ -450,6 +458,10 @@ final class TimerStore: ObservableObject {
     }
 
     private func handlePhaseCompletion() {
+        // The run the failure was about has ended. A repair notice stays until the user acts, as before.
+        if noticeMessage == Self.schedulingFailureNotice {
+            noticeMessage = nil
+        }
         switch state.phase {
         case .runningA:
             state = TimerState(phase: .waitingForAConfirm, cycleID: state.cycleID)
