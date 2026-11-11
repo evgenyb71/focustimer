@@ -36,6 +36,13 @@ struct ContentView: View {
                         .frame(maxWidth: .infinity)
                         .accessibilityIdentifier("doneButton")
                     }
+                    if let hint = timer.alertsHint {
+                        Label(hint, systemImage: "bell.slash")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .accessibilityIdentifier("alertsDeniedHint")
+                    }
                 }
                 .padding(20)
             }

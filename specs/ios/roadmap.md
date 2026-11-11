@@ -6,7 +6,6 @@ Work from the top. The user can reorder or split phases; note why in the phase s
 
 | Phase | Deliverable | Exit check |
 | --- | --- | --- |
-| I18 | Show permission status and useful failure guidance | Denied alerts and scheduling errors do not block timer flow; Settings guidance is available |
 | I23 | Make the active timer obvious | Design note in the phase spec, then the SwiftUI change: Focus and Break are visually distinct in running, paused, and waiting states. User-reported simulator screenshots show the active timer is identifiable at a glance; accessibility labels name it |
 | I20 | Supply final app icon | Complete the 1024×1024 artwork slot and verify appearance in the app/launcher |
 | I19 | Verify accessibility and visual resilience (after the UI phases above) | Check VoiceOver, Dynamic Type, contrast, focus/order, control labels and largest supported text sizes |
@@ -39,3 +38,4 @@ Each spec holds the evidence and limitations. The app before I01 is in Git histo
 | I16 | Done on the Break alert, without opening the app; both alerts reworded | [I16](phases/I16-notification-done.md) |
 | I26 | Debug-only short minutes for manual checks, set with `scripts/debug-minute.sh`; Release unaffected | [I26](phases/I26-debug-short-durations.md) |
 | I17 | Restart on the Break alert, without opening the app; starts one Focus, ignored after a reset | [I17](phases/I17-notification-restart.md) |
+| I18 | Hint while alerts are denied, pointing to Settings; notice when an alert cannot be scheduled; timer flow unaffected | [I18](phases/I18-permission-guidance.md) |

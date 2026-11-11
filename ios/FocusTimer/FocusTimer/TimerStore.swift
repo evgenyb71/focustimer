@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import UserNotifications
 
 @MainActor
 final class TimerStore: ObservableObject {
@@ -97,6 +98,8 @@ final class TimerStore: ObservableObject {
     }
 
     static let repairNotice = "Saved timer data was corrected."
+    static let schedulingFailureNotice = "The end-of-phase alert couldn't be scheduled. Keep the app open to see when it ends."
+    static let alertsDeniedHint = "Alerts are off, so you won't be told when a phase ends. Turn them on in Settings > Notifications > FocusTimer."
 
     /// Version of the saved `config` and `state` format. Records saved before versioning are version 0.
     nonisolated static let currentSchemaVersion = 3
@@ -138,6 +141,10 @@ final class TimerStore: ObservableObject {
     @Published private(set) var state: TimerState
     @Published private(set) var displayedSeconds: Int?
     @Published private(set) var noticeMessage: String?
+    /// True while the user has turned alerts off. Not saved; read at launch and on each activation.
+    @Published private(set) var alertsDenied = false
+    /// The latest permission read, kept so tests can wait for it.
+    private(set) var alertPermissionCheck: Task<Void, Never>?
 
     private static let configurationKey = "config"
     private static let stateKey = "state"
@@ -203,6 +210,7 @@ final class TimerStore: ObservableObject {
         reconcileWithCurrentTime()
         removeObsoleteDeliveredCompletions()
         startTicker()
+        checkAlertPermission()
     }
 
     var canEditDurations: Bool { state.phase == .idle || state.phase == .completed }
@@ -329,7 +337,7 @@ final class TimerStore: ObservableObject {
             state.remainingSeconds = nil
             state.paused = false
             persistState()
-            notifications.scheduleCompletion(for: state.phase, at: deadline, now: now, cycleID: state.cycleID)
+            scheduleCompletion(for: state.phase, at: deadline, now: now, cycleID: state.cycleID)
         } else {
             // At or after expiry the phase completes instead of pausing.
             reconcileWithCurrentTime()
@@ -374,6 +382,18 @@ final class TimerStore: ObservableObject {
     func activate() {
         reconcileWithCurrentTime()
         removeObsoleteDeliveredCompletions()
+        checkAlertPermission()
+    }
+
+    /// The hint shown while alerts are off, or nil.
+    var alertsHint: String? { alertsDenied ? Self.alertsDeniedHint : nil }
+
+    /// Reads the permission to alert and updates the denied hint. Timer flow never waits for it.
+    func checkAlertPermission() {
+        alertPermissionCheck = Task {
+            let status = await notifications.authorizationStatus()
+            alertsDenied = NotificationScheduler.isDenied(status)
+        }
     }
 
     func reconcileWithCurrentTime() {
@@ -395,7 +415,7 @@ final class TimerStore: ObservableObject {
             let capped = now.addingTimeInterval(TimeInterval(duration))
             state.endTimestamp = capped
             persistState()
-            notifications.scheduleCompletion(for: state.phase, at: capped, now: now, cycleID: state.cycleID)
+            scheduleCompletion(for: state.phase, at: capped, now: now, cycleID: state.cycleID)
         }
         updateDisplayedTime()
     }
@@ -412,7 +432,21 @@ final class TimerStore: ObservableObject {
         noticeMessage = nil
         persistState()
         updateDisplayedTime()
-        notifications.scheduleCompletion(for: phase, at: deadline, now: now, cycleID: cycleID)
+        scheduleCompletion(for: phase, at: deadline, now: now, cycleID: cycleID)
+    }
+
+    /// Schedules the completion alert. A failure shows the notice only while the same run is still current,
+    /// so a late failure cannot show it for a later phase, cycle, or deadline. The timer goes on either way.
+    private func scheduleCompletion(for phase: Phase, at deadline: Date, now: Date, cycleID: UUID?) {
+        notifications.scheduleCompletion(for: phase, at: deadline, now: now, cycleID: cycleID) { [weak self] in
+            guard let self,
+                  !self.alertsDenied,
+                  self.state.phase == phase,
+                  self.state.cycleID == cycleID,
+                  !self.state.paused,
+                  self.state.endTimestamp == deadline else { return }
+            self.noticeMessage = Self.schedulingFailureNotice
+        }
     }
 
     private func handlePhaseCompletion() {

@@ -31,7 +31,11 @@ final class AppDelegate: NSObject, UIApplicationDelegate, @preconcurrency UNUser
         let center = UNUserNotificationCenter.current()
         center.delegate = self
         NotificationScheduler.configureCategories()
-        NotificationScheduler.requestAuthorization()
+        Task {
+            await NotificationScheduler.requestAuthorization()
+            // The answer to the launch prompt may change the denied hint.
+            TimerStore.shared.checkAlertPermission()
+        }
         return true
     }
 
