@@ -42,7 +42,7 @@ struct TimerStoreAlertCleanupTests {
 
     @Test func focusStartAfterUnsupportedVersionCancelsAnOldPendingBreakRequest() {
         // A Break request scheduled by an earlier run is still pending when launch ignores the saved records.
-        notifications.scheduleCompletion(for: .runningB, at: clock.now.addingTimeInterval(300), now: clock.now, cycleID: UUID())
+        notifications.scheduleCompletion(for: .runningB, at: clock.now.addingTimeInterval(300), now: clock.now, cycleID: UUID()) {}
         if let version = try? JSONEncoder().encode(TimerStore.currentSchemaVersion + 1) {
             store.setData(version, forKey: "schemaVersion")
         }

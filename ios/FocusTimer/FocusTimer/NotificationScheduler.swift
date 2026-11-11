@@ -56,22 +56,50 @@ enum NotificationScheduler {
         return content
     }
 
-    static func requestAuthorization() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+    /// Asks for permission to alert; returns once the user has answered or the answer is already known.
+    static func requestAuthorization() async {
+        _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
+    }
+
+    /// Whether the user turned alerts off. A status not yet asked for, or a provisional one, is not denied.
+    nonisolated static func isDenied(_ status: UNAuthorizationStatus) -> Bool {
+        status == .denied
+    }
+
+    /// Whether a failed request should be reported to the user. Denied alerts are not a failure here;
+    /// the denied hint covers them.
+    nonisolated static func isReportableFailure(_ error: any Error) -> Bool {
+        (error as? UNError)?.code != .notificationsNotAllowed
     }
 }
 
 protocol NotificationScheduling {
-    func scheduleCompletion(for phase: TimerStore.Phase, at deadline: Date, now: Date, cycleID: UUID?)
+    /// Schedules the completion alert. `onFailure` runs on the main actor, possibly later, if iOS rejects
+    /// the request for any reason other than alerts being denied.
+    func scheduleCompletion(
+        for phase: TimerStore.Phase,
+        at deadline: Date,
+        now: Date,
+        cycleID: UUID?,
+        onFailure: @escaping @MainActor () -> Void
+    )
     func cancelPendingCompletion(for phase: TimerStore.Phase)
     func cancelAllPendingCompletions()
     /// Removes a completion alert for the phase that is already in Notification Center.
     func removeDeliveredCompletion(for phase: TimerStore.Phase)
     func removeAllDeliveredCompletions()
+    /// The current permission to alert, as Settings shows it.
+    func authorizationStatus() async -> UNAuthorizationStatus
 }
 
 struct SystemNotificationScheduler: NotificationScheduling {
-    func scheduleCompletion(for phase: TimerStore.Phase, at deadline: Date, now: Date, cycleID: UUID?) {
+    func scheduleCompletion(
+        for phase: TimerStore.Phase,
+        at deadline: Date,
+        now: Date,
+        cycleID: UUID?,
+        onFailure: @escaping @MainActor () -> Void
+    ) {
         guard let content = NotificationScheduler.content(for: phase, cycleID: cycleID) else { return }
         let identifier = phase == .runningA ? NotificationScheduler.focusIdentifier : NotificationScheduler.breakIdentifier
 
@@ -80,7 +108,16 @@ struct SystemNotificationScheduler: NotificationScheduling {
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: [identifier])
-        center.add(request)
+        // Submitted inline, so a later Pause or Cancel removal reaches the center after this add.
+        // The handler runs on a background queue; only the report hops to the main actor.
+        center.add(request) { @Sendable error in
+            guard let error, NotificationScheduler.isReportableFailure(error) else { return }
+            Task { @MainActor in onFailure() }
+        }
+    }
+
+    func authorizationStatus() async -> UNAuthorizationStatus {
+        await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
     }
 
     func cancelPendingCompletion(for phase: TimerStore.Phase) {

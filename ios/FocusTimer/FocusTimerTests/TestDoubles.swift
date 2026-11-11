@@ -1,4 +1,5 @@
 import Foundation
+import UserNotifications
 @testable import FocusTimer
 
 @MainActor
@@ -65,10 +66,32 @@ final class RecordingNotificationScheduler: NotificationScheduling {
     /// the request for the same phase, and cancelling removes it.
     private(set) var pendingPhases: Set<TimerStore.Phase> = []
 
-    func scheduleCompletion(for phase: TimerStore.Phase, at deadline: Date, now: Date, cycleID: UUID?) {
+    /// What `authorizationStatus()` returns.
+    var status: UNAuthorizationStatus = .authorized
+    /// The failure handler passed with each `schedule` call, in order. Calling one simulates iOS rejecting
+    /// that request, at whatever moment the test chooses.
+    private(set) var failureHandlers: [@MainActor () -> Void] = []
+
+    func scheduleCompletion(
+        for phase: TimerStore.Phase,
+        at deadline: Date,
+        now: Date,
+        cycleID: UUID?,
+        onFailure: @escaping @MainActor () -> Void
+    ) {
         calls.append(.schedule(phase: phase, deadline: deadline, now: now))
         scheduledCycleIDs.append(cycleID)
+        failureHandlers.append(onFailure)
         pendingPhases.insert(phase)
+    }
+
+    /// When true, each status read waits in `heldStatusReads` until the test resumes it.
+    var holdsStatusReads = false
+    private(set) var heldStatusReads: [CheckedContinuation<UNAuthorizationStatus, Never>] = []
+
+    func authorizationStatus() async -> UNAuthorizationStatus {
+        guard holdsStatusReads else { return status }
+        return await withCheckedContinuation { heldStatusReads.append($0) }
     }
 
     func cancelPendingCompletion(for phase: TimerStore.Phase) {

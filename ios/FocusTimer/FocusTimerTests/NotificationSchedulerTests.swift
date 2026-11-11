@@ -44,4 +44,13 @@ struct NotificationSchedulerTests {
     func phasesWithoutAnAlertHaveNoContent(_ phase: TimerStore.Phase) {
         #expect(NotificationScheduler.content(for: phase, cycleID: UUID()) == nil)
     }
+
+    @Test func deniedAlertsAreNotAReportableFailure() {
+        #expect(!NotificationScheduler.isReportableFailure(UNError(.notificationsNotAllowed)))
+    }
+
+    @Test func otherErrorsAreReportableFailures() {
+        #expect(NotificationScheduler.isReportableFailure(UNError(.attachmentInvalidURL)))
+        #expect(NotificationScheduler.isReportableFailure(CocoaError(.fileNoSuchFile)))
+    }
 }
