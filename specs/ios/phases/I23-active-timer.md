@@ -28,9 +28,9 @@ User, 2026-11-12:
 | Duration panel | Focus row highlighted in teal | Focus row highlighted, lighter | Dimmed (I24) | Break row highlighted in sage | Break row highlighted, lighter |
 
 - Idle and "Cycle complete" stay as they are. The Start button remains teal, since it starts Focus.
-- The row highlight is a tinted background with an accent bar at its leading edge. It does not change the Stepper, which is disabled while running anyway.
+- The row highlight is a tinted background with an accent bar at its leading edge. It does not change the Stepper, which is disabled while running anyway. Both rows always carry the highlight's padding, in every state, so the panel does not shift when a timer starts or stops; this slightly changes the panel's spacing in idle and at both ends too.
 - **Final colours:** Focus teal RGB (0.16, 0.44, 0.42), the Start button's colour. Break sage RGB (0.28, 0.44, 0.26), greyer and more yellow than the "Cycle complete" green (0.18, 0.48, 0.27). The card tint is 14 % of the accent while running and 7 % while paused; the border is 60 % at 2 pt running and 35 % at 1 pt paused.
-- **Contrast** (agent-computed, WCAG relative luminance, on the card tint over the top and bottom of the background gradient): teal 4.3 to 5.1, sage 4.3 to 5.0. The accent is used only for the phase name (28 pt bold) and the time (48 pt), which need 3:1 as large text. The small label stays in the secondary colour. The duration-row title uses the accent at caption size, at about 4.3:1, slightly under the 4.5:1 for small text; worth revisiting in I19.
+- **Contrast** (agent-computed, WCAG relative luminance, on the card tint over the top and bottom of the background gradient): teal 4.3 to 5.1, sage 4.3 to 5.0. The accent is used only for the phase name (28 pt bold) and the time (48 pt), which need 3:1 as large text. The small label stays in the secondary colour. The duration-row title uses the accent at caption size, at about 4.3:1, slightly under the 4.5:1 for small text; worth revisiting in I19. The "Running" and "Paused" captions in the secondary colour also fall short on the tinted card: the Codex review measured about 3.4 to 3.5:1 from the screenshots. Both go into the I19 contrast check.
 - **Accessibility:** the symbol is decorative. The phase name, the label, and the time read as one element, for example "Focus, running, 12 minutes 30 seconds remaining". The highlighted duration row adds the value "active". The pause and cancel labels stay as they are. A correction or scheduling notice still replaces the status line.
 
 Agent decisions, open to revision:
@@ -98,3 +98,11 @@ User-reported, 2026-11-12, on the user's simulator: Cmd+U passed; the screenshot
 
 Remaining limitations: colour perception for colour-blind users rests on the names and symbols; the duration-row title in the accent is about 4.3:1 at caption size (I19); the largest text sizes (I19); a physical device. The line under the time keeps the app's teal on the Break card, a possible later tweak.
 
+### Review
+
+Codex review: no merge blockers. Two notes, both recorded in this spec rather than changed in code:
+
+- **[P3] Caption contrast.** The "Running" and "Paused" captions measure about 3.4 to 3.5:1 on their tinted cards, under the 4.5:1 small-text target. Added to the contrast note for I19; the large phase name and symbol still identify the timer.
+- **Row padding in every state.** Intentional, so the panel does not shift when a timer starts or stops. The design note now says so.
+
+The extra blank line at the end of this spec is removed. No code changed, so no checks were rerun.
