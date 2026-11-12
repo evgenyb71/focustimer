@@ -21,7 +21,7 @@ struct ContentView: View {
                         timer.startOrConfirmBreak()
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(timer.endState?.accent ?? Color(red: 0.16, green: 0.44, blue: 0.42))
+                    .tint(timer.endState?.accent ?? TimerStore.ActiveTimer.Kind.focus.accent)
                     .controlSize(.large)
                     .frame(maxWidth: .infinity)
                     .disabled(!timer.canStart)
@@ -84,13 +84,15 @@ struct ContentView: View {
             durationRow(
                 title: "Focus Timer",
                 seconds: $timer.configuration.durationASeconds,
-                range: TimerStore.Configuration.focusRange
+                range: TimerStore.Configuration.focusRange,
+                kind: .focus
             )
             Divider()
             durationRow(
                 title: "Break Timer",
                 seconds: $timer.configuration.durationBSeconds,
-                range: TimerStore.Configuration.breakRange
+                range: TimerStore.Configuration.breakRange,
+                kind: .breakTime
             )
         }
         .padding()
@@ -107,17 +109,36 @@ struct ContentView: View {
         title: String,
         seconds: Binding<Int>,
         range: ClosedRange<Int>,
+        kind: TimerStore.ActiveTimer.Kind
     ) -> some View {
-        Stepper(value: seconds, in: range, step: 60) {
+        let active = timer.activeTimer?.kind == kind ? timer.activeTimer : nil
+        return Stepper(value: seconds, in: range, step: 60) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(title.uppercased())
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(active.map { AnyShapeStyle($0.kind.accent) } ?? AnyShapeStyle(.secondary))
                 Text("\(seconds.wrappedValue / 60) min")
                     .font(.headline)
             }
         }
         .disabled(!timer.canEditDurations)
+        // The active row is tinted with a bar at its leading edge, lighter while paused.
+        .padding(.vertical, 6)
+        .padding(.leading, 12)
+        .padding(.trailing, 6)
+        .background {
+            if let active {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(active.kind.accent.opacity(active.paused ? 0.06 : 0.12))
+                    .overlay(alignment: .leading) {
+                        Capsule()
+                            .fill(active.kind.accent.opacity(active.paused ? 0.45 : 1))
+                            .frame(width: 4)
+                            .padding(.vertical, 6)
+                    }
+            }
+        }
+        .modifier(ActiveRowValue(isActive: active != nil))
     }
 
     private var statusPanel: some View {
@@ -133,6 +154,28 @@ struct ContentView: View {
                     statusMessageText
                 }
                 .accessibilityElement(children: .combine)
+            } else if let active = timer.activeTimer {
+                VStack(spacing: 6) {
+                    HStack(spacing: 8) {
+                        Image(systemName: active.paused ? "pause.circle.fill" : active.kind.symbolName)
+                            .font(.title2)
+                        Text(active.name)
+                            .font(.title.bold())
+                    }
+                    .foregroundStyle(active.kind.accent)
+                    Text(timer.statusTitle.uppercased())
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Text(formattedTime)
+                        .font(.system(size: 48, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                        .contentTransition(.numericText())
+                        .foregroundStyle(active.paused ? AnyShapeStyle(.secondary) : AnyShapeStyle(active.kind.accent))
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(timer.activeTimerAccessibilityLabel ?? active.name)
+                .accessibilityIdentifier("activeTimerStatus")
+                statusMessageText
             } else {
                 Text(timer.statusTitle.uppercased())
                     .font(.caption.weight(.semibold))
@@ -153,13 +196,28 @@ struct ContentView: View {
                 .overlay {
                     if let accent = timer.endState?.accent {
                         RoundedRectangle(cornerRadius: 16).fill(accent.opacity(0.12))
+                    } else if let active = timer.activeTimer {
+                        RoundedRectangle(cornerRadius: 16).fill(active.kind.accent.opacity(active.paused ? 0.07 : 0.14))
                     }
                 }
         }
         .overlay {
             RoundedRectangle(cornerRadius: 16)
-                .stroke(timer.endState?.accent.opacity(0.5) ?? .brown.opacity(0.18), lineWidth: timer.endState == nil ? 1 : 2)
+                .stroke(cardBorderColor, lineWidth: cardBorderWidth)
         }
+    }
+
+    private var cardBorderColor: Color {
+        if let accent = timer.endState?.accent { return accent.opacity(0.5) }
+        if let active = timer.activeTimer { return active.kind.accent.opacity(active.paused ? 0.35 : 0.6) }
+        return .brown.opacity(0.18)
+    }
+
+    /// 2 at either end and while a timer runs; 1 while paused and in idle.
+    private var cardBorderWidth: CGFloat {
+        if timer.endState != nil { return 2 }
+        if let active = timer.activeTimer { return active.paused ? 1 : 2 }
+        return 1
     }
 
     private var statusMessageText: some View {
@@ -189,6 +247,37 @@ private extension TimerStore.EndState {
         switch self {
         case .focusComplete: Color(red: 0.66, green: 0.37, blue: 0.06)
         case .breakComplete: Color(red: 0.18, green: 0.48, blue: 0.27)
+        }
+    }
+}
+
+/// Adds "active" to the highlighted duration row, leaving the other row's own value untouched.
+private struct ActiveRowValue: ViewModifier {
+    let isActive: Bool
+
+    func body(content: Content) -> some View {
+        if isActive {
+            content.accessibilityValue("active")
+        } else {
+            content
+        }
+    }
+}
+
+private extension TimerStore.ActiveTimer.Kind {
+    var symbolName: String {
+        switch self {
+        case .focus: "brain.head.profile"
+        case .breakTime: "leaf.fill"
+        }
+    }
+
+    /// Teal for Focus, as on the Start button; a sage for Break that leads into the "Cycle complete" green.
+    /// Both meet WCAG AA for large text on the tinted card (see the I23 spec).
+    var accent: Color {
+        switch self {
+        case .focus: Color(red: 0.16, green: 0.44, blue: 0.42)
+        case .breakTime: Color(red: 0.28, green: 0.44, blue: 0.26)
         }
     }
 }
