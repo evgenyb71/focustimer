@@ -97,6 +97,24 @@ final class TimerStore: ObservableObject {
         case breakComplete
     }
 
+    /// The timer that is running or paused, for the active presentation.
+    struct ActiveTimer: Equatable {
+        enum Kind: Equatable {
+            case focus
+            case breakTime
+        }
+
+        var kind: Kind
+        var paused: Bool
+
+        var name: String {
+            switch kind {
+            case .focus: "Focus"
+            case .breakTime: "Break"
+            }
+        }
+    }
+
     static let repairNotice = "Saved timer data was corrected."
     static let schedulingFailureNotice = "The end-of-phase alert couldn't be scheduled. Keep the app open to see when it ends."
     static let alertsDeniedHint = "Alerts are off, so you won't be told when a phase ends. Turn them on in Settings > Notifications > FocusTimer."
@@ -239,13 +257,43 @@ final class TimerStore: ObservableObject {
         }
     }
 
+    /// Focus or Break while it runs or is paused; nil in idle and at either end.
+    var activeTimer: ActiveTimer? {
+        switch state.phase {
+        case .runningA: ActiveTimer(kind: .focus, paused: state.paused)
+        case .runningB: ActiveTimer(kind: .breakTime, paused: state.paused)
+        case .idle, .waitingForAConfirm, .completed: nil
+        }
+    }
+
+    /// The small label on the status card. While a timer is active it sits under the phase name.
     var statusTitle: String {
         switch state.phase {
         case .idle: "Ready"
         case .completed: "Cycle complete"
-        case .runningA: state.paused ? "Focus paused" : "Focus Timer running"
+        case .runningA, .runningB: state.paused ? "Paused" : "Running"
         case .waitingForAConfirm: "Focus Timer complete"
-        case .runningB: state.paused ? "Break paused" : "Break Timer running"
+        }
+    }
+
+    /// What VoiceOver reads for an active timer, for example "Focus, running, 12 minutes 30 seconds
+    /// remaining"; nil when no timer is active.
+    var activeTimerAccessibilityLabel: String? {
+        guard let activeTimer else { return nil }
+        let remaining = Self.spokenDuration(displayedSeconds ?? 0)
+        return "\(activeTimer.name), \(statusTitle.lowercased()), \(remaining) remaining"
+    }
+
+    /// Whole minutes and seconds in words, leaving out a zero part: "12 minutes 30 seconds", "1 minute", "5 seconds".
+    nonisolated static func spokenDuration(_ seconds: Int) -> String {
+        let total = max(0, seconds)
+        let minutes = total / 60
+        let rest = total % 60
+        func unit(_ value: Int, _ name: String) -> String { "\(value) \(name)\(value == 1 ? "" : "s")" }
+        switch (minutes, rest) {
+        case (0, _): return unit(rest, "second")
+        case (_, 0): return unit(minutes, "minute")
+        default: return "\(unit(minutes, "minute")) \(unit(rest, "second"))"
         }
     }
 
