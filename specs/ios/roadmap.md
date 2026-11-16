@@ -6,7 +6,8 @@ Work from the top. The user can reorder or split phases; note why in the phase s
 
 | Phase | Deliverable | Exit check |
 | --- | --- | --- |
-| I19 | Verify accessibility and visual resilience (after the UI phases above) | Check VoiceOver, Dynamic Type, contrast, focus/order, control labels and largest supported text sizes |
+| I27 | Quiet completion alerts while the app is open | When Focus or Break ends with the app in the foreground, no banner or Notification Center entry appears, but the sound still plays; alerts in the background are unchanged. User-reported foreground and background alert check |
+| I28 | Verify with Accessibility Inspector and VoiceOver (deferred from I19) | Inspector audit of idle, Focus running, paused, waiting for Break, and Cycle complete with no unexplained issues; a VoiceOver walk through one full cycle with every control labelled and the order following the screen. User-reported |
 | I21 | Prepare local release notes and verification checklist (last) | Record version/build, privacy behavior, known limits, device checks, and reproducible build steps; write the changelog from Git history since 2026-11-02 |
 
 Later decisions, not scheduled: App Store submission, store screenshots and privacy forms, signing and distribution automation, and release policy. Not part of this roadmap: custom sound, alternative defaults, fractional-minute input, broader device or OS support, sync, and analytics.
@@ -39,3 +40,4 @@ Each spec holds the evidence and limitations. The app before I01 is in Git histo
 | I18 | Hint while alerts are denied, pointing to Settings; notice when an alert cannot be scheduled; timer flow unaffected | [I18](phases/I18-permission-guidance.md) |
 | I23 | Teal Focus and sage Break on the status card and duration row while running or paused; VoiceOver names the timer | [I23](phases/I23-active-timer.md) |
 | I20 | App icon of two timer rings, teal Focus behind sage Break, in light, dark, and tinted versions, drawn by `scripts/make-app-icon.swift` | [I20](phases/I20-app-icon.md) |
+| I19 | Light and dark themes from one contrast-tested palette; layout adapts to the largest text sizes; clearer VoiceOver labels; Inspector and VoiceOver check deferred to I28 | [I19](phases/I19-accessibility.md) |

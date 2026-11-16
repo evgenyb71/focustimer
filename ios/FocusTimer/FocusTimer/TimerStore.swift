@@ -284,6 +284,17 @@ final class TimerStore: ObservableObject {
         return "\(activeTimer.name), \(statusTitle.lowercased()), \(remaining) remaining"
     }
 
+    /// What VoiceOver reads for the time on the status card outside an active timer: the time in words, or
+    /// "No timer running" in idle, where the card shows dashes.
+    var statusTimeAccessibilityLabel: String {
+        displayedSeconds.map { Self.spokenDuration($0) } ?? "No timer running"
+    }
+
+    /// What VoiceOver reads as a duration row's value, for example "25 minutes" or "25 minutes, active".
+    nonisolated static func durationAccessibilityValue(seconds: Int, active: Bool) -> String {
+        spokenDuration(seconds) + (active ? ", active" : "")
+    }
+
     /// Whole minutes and seconds in words, leaving out a zero part: "12 minutes 30 seconds", "1 minute", "5 seconds".
     nonisolated static func spokenDuration(_ seconds: Int) -> String {
         let total = max(0, seconds)

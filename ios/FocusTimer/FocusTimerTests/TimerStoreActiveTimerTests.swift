@@ -139,4 +139,23 @@ struct TimerStoreActiveTimerTests {
     func spokenDuration(seconds: Int, expected: String) {
         #expect(TimerStore.spokenDuration(seconds) == expected)
     }
+
+    // MARK: Other spoken labels
+
+    @Test func idleTimeIsSpokenAsNoTimerRunning() {
+        let timer = makeTimer()
+
+        #expect(timer.statusTimeAccessibilityLabel == "No timer running")
+    }
+
+    @Test func waitingTimeIsSpokenInWords() {
+        let timer = makeWaiting()
+
+        #expect(timer.statusTimeAccessibilityLabel == "0 seconds")
+    }
+
+    @Test func durationRowsSpeakMinutesAndActive() {
+        #expect(TimerStore.durationAccessibilityValue(seconds: 25 * 60, active: false) == "25 minutes")
+        #expect(TimerStore.durationAccessibilityValue(seconds: 60, active: true) == "1 minute, active")
+    }
 }

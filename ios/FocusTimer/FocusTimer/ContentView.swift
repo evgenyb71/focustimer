@@ -2,11 +2,17 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject private var timer: TimerStore
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    /// The time and end symbol grow with Dynamic Type, capped so the time stays on one line.
+    @ScaledMetric(relativeTo: .largeTitle) private var timeSize: CGFloat = 48
+    @ScaledMetric(relativeTo: .largeTitle) private var endSymbolSize: CGFloat = 56
+
+    private var isAccessibilitySize: Bool { dynamicTypeSize.isAccessibilitySize }
 
     var body: some View {
         ZStack {
             LinearGradient(
-                colors: [Color(red: 0.99, green: 0.96, blue: 0.91), Color(red: 0.93, green: 0.87, blue: 0.80)],
+                colors: [Palette.backgroundTop.color, Palette.backgroundBottom.color],
                 startPoint: .top,
                 endPoint: .bottom
             )
@@ -21,7 +27,7 @@ struct ContentView: View {
                         timer.startOrConfirmBreak()
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(timer.endState?.accent ?? TimerStore.ActiveTimer.Kind.focus.accent)
+                    .tint(Palette.buttonFill(timer.endState?.accent ?? Palette.focus))
                     .controlSize(.large)
                     .frame(maxWidth: .infinity)
                     .disabled(!timer.canStart)
@@ -31,7 +37,7 @@ struct ContentView: View {
                             timer.done()
                         }
                         .buttonStyle(.bordered)
-                        .tint(timer.endState?.accent)
+                        .tint(timer.endState?.accent.color)
                         .controlSize(.large)
                         .frame(maxWidth: .infinity)
                         .accessibilityIdentifier("doneButton")
@@ -39,7 +45,7 @@ struct ContentView: View {
                     if let hint = timer.alertsHint {
                         Label(hint, systemImage: "bell.slash")
                             .font(.footnote)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Palette.secondaryText.color)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .accessibilityIdentifier("alertsDeniedHint")
                     }
@@ -49,16 +55,41 @@ struct ContentView: View {
         }
     }
 
+    // MARK: Header
+
+    /// At accessibility sizes the buttons move above the title, so the title gets the full width.
+    @ViewBuilder
     private var header: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 5) {
-                Text("Focus / Break Timer")
-                    .font(.title2.bold())
-                Text("Run Focus, confirm, then run Break.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+        if isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 12) {
+                    Spacer()
+                    headerButtons
+                }
+                headerTitle
             }
-            Spacer()
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            HStack(alignment: .top, spacing: 12) {
+                headerTitle
+                Spacer()
+                headerButtons
+            }
+        }
+    }
+
+    private var headerTitle: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text("Focus / Break Timer")
+                .font(.title2.bold())
+            Text("Run Focus, confirm, then run Break.")
+                .font(.subheadline)
+                .foregroundStyle(Palette.secondaryText.color)
+        }
+    }
+
+    private var headerButtons: some View {
+        HStack(spacing: 12) {
             if timer.canPause {
                 Button {
                     timer.pauseOrResume()
@@ -77,7 +108,10 @@ struct ContentView: View {
             }
         }
         .buttonStyle(.bordered)
+        .tint(Palette.focus.color)
     }
+
+    // MARK: Durations
 
     private var durationPanel: some View {
         VStack(spacing: 16) {
@@ -96,10 +130,10 @@ struct ContentView: View {
             )
         }
         .padding()
-        .background(.white.opacity(0.72), in: RoundedRectangle(cornerRadius: 16))
+        .background(Palette.card.color, in: RoundedRectangle(cornerRadius: 16))
         .overlay {
             RoundedRectangle(cornerRadius: 16)
-                .stroke(.brown.opacity(0.18))
+                .stroke(Palette.cardBorder.color)
         }
         // Quieter while Focus waits for Break confirmation, so the next action stands out.
         .opacity(timer.endState == .focusComplete ? 0.6 : 1)
@@ -112,16 +146,30 @@ struct ContentView: View {
         kind: TimerStore.ActiveTimer.Kind
     ) -> some View {
         let active = timer.activeTimer?.kind == kind ? timer.activeTimer : nil
-        return Stepper(value: seconds, in: range, step: 60) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title.uppercased())
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(active.map { AnyShapeStyle($0.kind.accent) } ?? AnyShapeStyle(.secondary))
-                Text("\(seconds.wrappedValue / 60) min")
-                    .font(.headline)
+        let label = VStack(alignment: .leading, spacing: 3) {
+            Text(title.uppercased())
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(active.map { $0.kind.accent.color } ?? Palette.secondaryText.color)
+            Text("\(seconds.wrappedValue / 60) min")
+                .font(.headline)
+        }
+        let stepper = Stepper(value: seconds, in: range, step: 60) { label }
+            .disabled(!timer.canEditDurations)
+            .accessibilityLabel(title)
+            .accessibilityValue(TimerStore.durationAccessibilityValue(seconds: seconds.wrappedValue, active: active != nil))
+
+        return Group {
+            // At accessibility sizes the stepper sits under its label instead of beside it.
+            if isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 8) {
+                    label.accessibilityHidden(true)
+                    stepper.labelsHidden()
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                stepper
             }
         }
-        .disabled(!timer.canEditDurations)
         // The active row is tinted with a bar at its leading edge, lighter while paused.
         .padding(.vertical, 6)
         .padding(.leading, 12)
@@ -129,24 +177,25 @@ struct ContentView: View {
         .background {
             if let active {
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(active.kind.accent.opacity(active.paused ? 0.06 : 0.12))
+                    .fill(active.kind.accent.color.opacity(active.paused ? 0.06 : 0.12))
                     .overlay(alignment: .leading) {
                         Capsule()
-                            .fill(active.kind.accent.opacity(active.paused ? 0.45 : 1))
+                            .fill(active.kind.accent.color.opacity(active.paused ? 0.45 : 1))
                             .frame(width: 4)
                             .padding(.vertical, 6)
                     }
             }
         }
-        .modifier(ActiveRowValue(isActive: active != nil))
     }
+
+    // MARK: Status card
 
     private var statusPanel: some View {
         VStack(spacing: 10) {
             if let endState = timer.endState, let headline = timer.endHeadline {
                 Image(systemName: endState.symbolName)
-                    .font(.system(size: 56))
-                    .foregroundStyle(endState.accent)
+                    .font(.system(size: min(endSymbolSize, 112)))
+                    .foregroundStyle(endState.accent.color)
                     .accessibilityHidden(true)
                 VStack(spacing: 6) {
                     Text(headline)
@@ -162,29 +211,27 @@ struct ContentView: View {
                         Text(active.name)
                             .font(.title.bold())
                     }
-                    .foregroundStyle(active.kind.accent)
+                    .foregroundStyle(active.kind.accent.color)
                     Text(timer.statusTitle.uppercased())
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                    Text(formattedTime)
-                        .font(.system(size: 48, weight: .semibold, design: .rounded))
-                        .monospacedDigit()
-                        .contentTransition(.numericText())
-                        .foregroundStyle(active.paused ? AnyShapeStyle(.secondary) : AnyShapeStyle(active.kind.accent))
+                        .foregroundStyle(Palette.secondaryText.color)
+                    timeText
+                        .foregroundStyle(active.paused ? Palette.secondaryText.color : active.kind.accent.color)
                 }
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(timer.activeTimerAccessibilityLabel ?? active.name)
                 .accessibilityIdentifier("activeTimerStatus")
                 statusMessageText
             } else {
-                Text(timer.statusTitle.uppercased())
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                Text(formattedTime)
-                    .font(.system(size: 48, weight: .semibold, design: .rounded))
-                    .monospacedDigit()
-                    .contentTransition(.numericText())
-                statusMessageText
+                VStack(spacing: 10) {
+                    Text(timer.statusTitle.uppercased())
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Palette.secondaryText.color)
+                    timeText
+                        .accessibilityLabel(timer.statusTimeAccessibilityLabel)
+                    statusMessageText
+                }
+                .accessibilityElement(children: .combine)
             }
         }
         .frame(maxWidth: .infinity)
@@ -192,12 +239,13 @@ struct ContentView: View {
         .padding(.horizontal)
         .background {
             RoundedRectangle(cornerRadius: 16)
-                .fill(.white.opacity(0.62))
+                .fill(Palette.card.color)
                 .overlay {
                     if let accent = timer.endState?.accent {
-                        RoundedRectangle(cornerRadius: 16).fill(accent.opacity(0.12))
+                        RoundedRectangle(cornerRadius: 16).fill(accent.color.opacity(Palette.endTint))
                     } else if let active = timer.activeTimer {
-                        RoundedRectangle(cornerRadius: 16).fill(active.kind.accent.opacity(active.paused ? 0.07 : 0.14))
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(active.kind.accent.color.opacity(active.paused ? Palette.pausedTint : Palette.runningTint))
                     }
                 }
         }
@@ -207,10 +255,19 @@ struct ContentView: View {
         }
     }
 
+    private var timeText: some View {
+        Text(formattedTime)
+            .font(.system(size: min(timeSize, 96), weight: .semibold, design: .rounded))
+            .monospacedDigit()
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
+            .contentTransition(.numericText())
+    }
+
     private var cardBorderColor: Color {
-        if let accent = timer.endState?.accent { return accent.opacity(0.5) }
-        if let active = timer.activeTimer { return active.kind.accent.opacity(active.paused ? 0.35 : 0.6) }
-        return .brown.opacity(0.18)
+        if let accent = timer.endState?.accent { return accent.color.opacity(0.5) }
+        if let active = timer.activeTimer { return active.kind.accent.color.opacity(active.paused ? 0.35 : 0.6) }
+        return Palette.cardBorder.color
     }
 
     /// 2 at either end and while a timer runs; 1 while paused and in idle.
@@ -223,7 +280,7 @@ struct ContentView: View {
     private var statusMessageText: some View {
         Text(timer.statusMessage)
             .font(.subheadline)
-            .foregroundStyle(Color(red: 0.12, green: 0.33, blue: 0.31))
+            .foregroundStyle(Palette.message.color)
             .multilineTextAlignment(.center)
             .frame(minHeight: 20)
     }
@@ -242,24 +299,11 @@ private extension TimerStore.EndState {
         }
     }
 
-    /// Dark enough for white button text at WCAG AA (contrast about 4.9 for amber and 5.3 for green).
-    var accent: Color {
+    /// Amber for Focus end, green for Break end (see `Palette`).
+    var accent: Palette.Pair {
         switch self {
-        case .focusComplete: Color(red: 0.66, green: 0.37, blue: 0.06)
-        case .breakComplete: Color(red: 0.18, green: 0.48, blue: 0.27)
-        }
-    }
-}
-
-/// Adds "active" to the highlighted duration row, leaving the other row's own value untouched.
-private struct ActiveRowValue: ViewModifier {
-    let isActive: Bool
-
-    func body(content: Content) -> some View {
-        if isActive {
-            content.accessibilityValue("active")
-        } else {
-            content
+        case .focusComplete: Palette.focusComplete
+        case .breakComplete: Palette.breakComplete
         }
     }
 }
@@ -272,12 +316,11 @@ private extension TimerStore.ActiveTimer.Kind {
         }
     }
 
-    /// Teal for Focus, as on the Start button; a sage for Break that leads into the "Cycle complete" green.
-    /// Both meet WCAG AA for large text on the tinted card (see the I23 spec).
-    var accent: Color {
+    /// Teal for Focus, sage for Break (see `Palette`).
+    var accent: Palette.Pair {
         switch self {
-        case .focus: Color(red: 0.16, green: 0.44, blue: 0.42)
-        case .breakTime: Color(red: 0.28, green: 0.44, blue: 0.26)
+        case .focus: Palette.focus
+        case .breakTime: Palette.breakTime
         }
     }
 }
