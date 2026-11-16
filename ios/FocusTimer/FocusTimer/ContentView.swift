@@ -130,13 +130,17 @@ struct ContentView: View {
             )
         }
         .padding()
-        .background(Palette.card.color, in: RoundedRectangle(cornerRadius: 16))
+        // Quieter while Focus waits for Break confirmation, so the next action stands out. Only the card fades;
+        // the labels and durations stay at full contrast, and the steppers are dimmed as disabled controls.
+        .background(Palette.card.color.opacity(durationCardOpacity), in: RoundedRectangle(cornerRadius: 16))
         .overlay {
             RoundedRectangle(cornerRadius: 16)
-                .stroke(Palette.cardBorder.color)
+                .stroke(Palette.cardBorder.color.opacity(durationCardOpacity))
         }
-        // Quieter while Focus waits for Break confirmation, so the next action stands out.
-        .opacity(timer.endState == .focusComplete ? 0.6 : 1)
+    }
+
+    private var durationCardOpacity: Double {
+        timer.endState == .focusComplete ? Palette.waitingCardOpacity : 1
     }
 
     private func durationRow(

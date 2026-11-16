@@ -49,6 +49,17 @@ struct PaletteContrastTests {
     }
 
     @Test(arguments: Theme.allCases)
+    func durationTextMeetsAAOnTheFadedWaitingCard(theme: Theme) {
+        // While waiting for Break the duration card fades over the gradient; its labels and durations do not.
+        for background in [Palette.backgroundTop, Palette.backgroundBottom] {
+            let faded = value(Palette.card, theme).over(value(background, theme), opacity: Palette.waitingCardOpacity)
+            for text in [Palette.primaryText, Palette.secondaryText] {
+                #expect(value(text, theme).contrast(with: faded) >= Self.smallText, "\(text) on \(faded)")
+            }
+        }
+    }
+
+    @Test(arguments: Theme.allCases)
     func textOutsideCardsMeetsAAOnTheBackground(theme: Theme) {
         // The title, subtitle, and alerts hint sit on the gradient.
         for background in [Palette.backgroundTop, Palette.backgroundBottom] {

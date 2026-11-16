@@ -78,4 +78,6 @@ enum Palette {
     static let runningTint = 0.14
     static let pausedTint = 0.07
     static let endTint = 0.12
+    /// The duration card's opacity while waiting for Break; the gradient shows through it.
+    static let waitingCardOpacity = 0.6
 }

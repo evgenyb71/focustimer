@@ -91,9 +91,8 @@ Agent-run:
 
 User-reported, in Xcode:
 
-- Accessibility Inspector audit of idle, Focus running, paused, waiting for Break, and Cycle complete, with no remaining issues or each one explained.
-- VoiceOver through one full cycle: every control is labelled, the order follows the screen, and the status card reads the phase and time.
 - Screenshots at the largest accessibility text size and in dark mode, with nothing clipped or unreadable.
+- Deferred to I28 at the user's request: the Accessibility Inspector audit of idle, Focus running, paused, waiting for Break, and Cycle complete; VoiceOver through one full cycle.
 
 Stays unverified: Switch Control and Voice Control beyond the labels; colour perception for colour-blind users beyond the names and symbols; a physical device.
 
@@ -113,6 +112,13 @@ iPhone 17 Pro, iOS 26.5: total 256, passed 256, failed 0, skipped 0, expected fa
 PASSED
 ```
 
+After the review fix, same simulator, with agent screenshots of the waiting screen in light and dark showing the duration labels at full contrast:
+
+```text
+iPhone 17 Pro, iOS 26.5: total 257, passed 257, failed 0, skipped 0, expected failures 0
+PASSED
+```
+
 New tests: `PaletteContrastTests` checks every text and accent colour against the plain and tinted cards and the background, in both themes, at 4.5:1 for small text and 3:1 for large text, plus white on the filled buttons. `TimerStoreActiveTimerTests` adds the idle time and duration-row labels.
 
 Agent screenshots, 2026-11-16, iPhone 17 Pro, iOS 26.5, Debug build, with seeded saved state and `xcrun simctl ui` for appearance and text size: idle, Focus running, waiting for Break, and Cycle complete, in light and dark, at the default size and the largest accessibility size. Dark mode is readable throughout. At the largest size the title wraps by word, the buttons sit above it, the steppers sit under their labels, and the time scales and stays on one line. Audit findings 1 to 7 are addressed; VoiceOver itself is left to the user check.
@@ -123,3 +129,10 @@ Deferred to [I28](../roadmap.md) at the user's request: the Accessibility Inspec
 
 Remaining limitations: VoiceOver and the Inspector audit (I28); Switch Control and Voice Control beyond the labels; colour perception for colour-blind users beyond the names and symbols; a physical device.
 
+### Review
+
+Codex review: one P2 finding, fixed, and two documentation notes, addressed.
+
+- **[P2] Faded labels on the waiting screen.** While waiting for Break, the duration panel faded to 60 % as a whole, text included, at about 2.7:1 in light and 3.3:1 in dark. Now only the card and its border fade; the labels and durations stay at full contrast, and the disabled steppers dim as usual. `PaletteContrastTests` checks the text against the faded card over both ends of the gradient in both themes.
+- The Checks section now marks the Inspector audit and VoiceOver as deferred to I28.
+- The extra blank line at the end of this spec is removed.
