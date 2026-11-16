@@ -12,6 +12,11 @@ enum NotificationScheduler {
     /// `userInfo` key holding the cycle ID as a UUID string.
     nonisolated static let cycleIDKey = "cycleID"
 
+    /// How an alert is shown when it arrives while the app is open: the sound only. The screen already shows
+    /// the end of the phase, so there is no banner and no Notification Center entry. iOS asks for this only in
+    /// the foreground; background and closed delivery are unchanged.
+    nonisolated static let foregroundPresentation: UNNotificationPresentationOptions = [.sound]
+
     /// The cycle ID a completion notification was scheduled for, or nil if it has none.
     nonisolated static func cycleID(in userInfo: [AnyHashable: Any]) -> UUID? {
         (userInfo[cycleIDKey] as? String).flatMap(UUID.init(uuidString:))
