@@ -71,3 +71,6 @@ User-reported, 2026-11-16, on the user's simulator with `scripts/debug-minute.sh
 
 Remaining limitations: a physical device; the foreground case with the device locked.
 
+### Review
+
+Codex review: no correctness blockers; recommended merging. One nonblocking note, fixed: the extra blank line at the end of this spec. No code changed, so no checks were rerun.
