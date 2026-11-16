@@ -52,7 +52,7 @@ Agent-run:
 
 - `scripts/test.sh`, as the project's assets change; no new unit tests, since no Swift logic changes.
 - `sips` checks the size and alpha of each PNG.
-- Home Screen screenshots in each look on the agent's own simulator.
+- A screenshot of the light icon in the App Library on the agent's own simulator. The dark and tinted looks are set under the Home Screen's Customize menu, which the agent cannot reach from the command line, so they are user-reported only.
 
 User-reported, in Xcode:
 
@@ -80,3 +80,11 @@ User-reported, 2026-11-16, on the user's simulator: the app built and ran; Home 
 
 Remaining limitations: not checked on a physical device, or at every system size beyond the Home Screen, App Library, Settings, and alerts. The icon is flat; iOS adds its own glass edge, and an Icon Composer layered icon stays a later option.
 
+### Review
+
+Codex review: no merge blockers. It regenerated the three PNGs byte for byte from the script and confirmed the compiled renditions. Two documentation notes, both addressed:
+
+- The Checks section asked for agent screenshots in every look; it now matches the split recorded in the Plan and Results, with dark and tinted user-reported only.
+- The extra blank line at the end of this spec is removed.
+
+No code or assets changed, so no checks were rerun.
