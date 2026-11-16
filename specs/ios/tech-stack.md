@@ -24,10 +24,10 @@ Under `ios/FocusTimer/`:
 - `FocusTimer/Clock.swift`, `KeyValueStore.swift`: the injected time and storage boundaries.
 - `FocusTimer/NotificationScheduler.swift`: identifiers, categories, alert content, and authorization; the injected `NotificationScheduling` boundary and `SystemNotificationScheduler`.
 - `FocusTimer/FocusTimerApp.swift`: entry point, scene lifecycle, notification response delegation.
-- `FocusTimer/ContentView.swift`: durations, status, and controls, with the end-state presentation driven by `TimerStore.endState` and the running or paused presentation by `TimerStore.activeTimer`; phase colours and symbols live in the view. `Assets.xcassets`: color and icon slots.
+- `FocusTimer/ContentView.swift`: durations, status, and controls, with the end-state presentation driven by `TimerStore.endState` and the running or paused presentation by `TimerStore.activeTimer`; phase colours and symbols live in the view. `Assets.xcassets`: accent colour, and the app icon in light, dark, and tinted PNGs.
 - `FocusTimerTests/`: one `*Tests.swift` file per suite; `TestDoubles.swift` has the fake clock, in-memory store, recording notification scheduler, and test arguments shared across suites.
 
-`scripts/test.sh` runs the unit tests and checks the executed count. `scripts/debug-minute.sh` sets the Debug-only short minute on a simulator, or sets it back to 60 with `off`.
+`scripts/test.sh` runs the unit tests and checks the executed count. `scripts/make-app-icon.swift` redraws the three icon PNGs with CoreGraphics (`swift scripts/make-app-icon.swift`); it is not part of the build. `scripts/debug-minute.sh` sets the Debug-only short minute on a simulator, or sets it back to 60 with `off`.
 
 ## Design notes
 
