@@ -43,7 +43,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, @preconcurrency UNUser
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
-        [.banner, .list, .sound]
+        NotificationScheduler.foregroundPresentation
     }
 
     func userNotificationCenter(

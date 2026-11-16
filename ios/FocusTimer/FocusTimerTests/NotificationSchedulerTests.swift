@@ -53,4 +53,12 @@ struct NotificationSchedulerTests {
         #expect(NotificationScheduler.isReportableFailure(UNError(.attachmentInvalidURL)))
         #expect(NotificationScheduler.isReportableFailure(CocoaError(.fileNoSuchFile)))
     }
+
+    @Test func alertsWhileTheAppIsOpenPlayOnlyTheSound() {
+        let options = NotificationScheduler.foregroundPresentation
+
+        #expect(options == [.sound])
+        #expect(!options.contains(.banner))
+        #expect(!options.contains(.list))
+    }
 }
