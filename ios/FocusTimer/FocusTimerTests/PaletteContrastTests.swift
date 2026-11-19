@@ -71,7 +71,8 @@ struct PaletteContrastTests {
 
     @Test func filledButtonsKeepWhiteLabelsReadable() {
         let white = Palette.RGB(red: 1, green: 1, blue: 1)
-        for accent in [Palette.focus, Palette.focusComplete, Palette.breakComplete] {
+        // Phase fills, and the neutral fill of the Done button (I28).
+        for accent in [Palette.focus, Palette.focusComplete, Palette.breakComplete, Palette.secondaryText] {
             #expect(white.contrast(with: accent.light) >= Self.smallText)
         }
     }

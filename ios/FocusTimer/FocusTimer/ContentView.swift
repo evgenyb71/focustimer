@@ -36,8 +36,9 @@ struct ContentView: View {
                         Button("Done") {
                             timer.done()
                         }
-                        .buttonStyle(.bordered)
-                        .tint(timer.endState?.accent.color)
+                        // A solid neutral fill: text on a bordered button's light glass failed the contrast audit (I28).
+                        .buttonStyle(.borderedProminent)
+                        .tint(Palette.buttonFill(Palette.secondaryText))
                         .controlSize(.large)
                         .frame(maxWidth: .infinity)
                         .accessibilityIdentifier("doneButton")
@@ -107,8 +108,9 @@ struct ContentView: View {
                 .accessibilityLabel("Cancel and reset")
             }
         }
-        .buttonStyle(.bordered)
-        .tint(Palette.focus.color)
+        // Solid fills: a teal icon on the light glass of a bordered button failed the contrast audit (I28).
+        .buttonStyle(.borderedProminent)
+        .tint(Palette.buttonFill(Palette.focus))
     }
 
     // MARK: Durations

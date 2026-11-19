@@ -13,7 +13,7 @@ Build and test commands are in [AGENTS.md](../../AGENTS.md#build-and-verificatio
 | Notifications | UserNotifications local requests, categories, and actions; UIKit app delegate bridge |
 | Lifecycle | SwiftUI `scenePhase` activation and launch reconciliation |
 | Dependencies | Apple frameworks only |
-| Testing | `FocusTimerTests` target (Swift Testing, hosted by the app); XCTest reserved for planned UI tests |
+| Testing | `FocusTimerTests` target (Swift Testing, hosted by the app), scheme FocusTimer; `FocusTimerUITests` target (XCTest UI tests: the accessibility audit), scheme FocusTimer UI Tests |
 
 ## Source map
 
@@ -25,9 +25,10 @@ Under `ios/FocusTimer/`:
 - `FocusTimer/NotificationScheduler.swift`: identifiers, categories, alert content, and authorization; the injected `NotificationScheduling` boundary and `SystemNotificationScheduler`.
 - `FocusTimer/FocusTimerApp.swift`: entry point, scene lifecycle, notification response delegation.
 - `FocusTimer/ContentView.swift`: durations, status, and controls, with the end-state presentation driven by `TimerStore.endState` and the running or paused presentation by `TimerStore.activeTimer`; phase symbols live in the view. `FocusTimer/Palette.swift`: every colour with its light and dark value, and the contrast maths that `PaletteContrastTests` uses. Dynamic colours resolve on SwiftUI's background render thread too, so their provider must stay nonisolated. `Assets.xcassets`: accent colour, and the app icon in light, dark, and tinted PNGs.
+- `FocusTimerUITests/AccessibilityAuditTests.swift`: Apple's accessibility audit on idle, Focus running, paused, waiting for Break, and Cycle complete, at the default and largest text size. Each screen is reached by seeding `config`, `state`, and `schemaVersion` through launch arguments for that launch; the app has no test code.
 - `FocusTimerTests/`: one `*Tests.swift` file per suite; `TestDoubles.swift` has the fake clock, in-memory store, recording notification scheduler, and test arguments shared across suites.
 
-`scripts/test.sh` runs the unit tests and checks the executed count. `scripts/make-app-icon.swift` redraws the three icon PNGs with CoreGraphics (`swift scripts/make-app-icon.swift`); it is not part of the build. `scripts/debug-minute.sh` sets the Debug-only short minute on a simulator, or sets it back to 60 with `off`.
+`scripts/test.sh` runs the unit tests and checks the executed count; `scripts/test.sh --ui` runs the UI tests the same way. `scripts/make-app-icon.swift` redraws the three icon PNGs with CoreGraphics (`swift scripts/make-app-icon.swift`); it is not part of the build. `scripts/debug-minute.sh` sets the Debug-only short minute on a simulator, or sets it back to 60 with `off`.
 
 ## Design notes
 

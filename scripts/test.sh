@@ -1,18 +1,26 @@
 #!/bin/sh
 # Runs the unit tests and fails unless the build succeeds, tests ran, and none failed.
-# Usage: scripts/test.sh [device name] [iOS version]
+# With --ui first, runs the UI tests (the accessibility audit, "FocusTimer UI Tests" scheme) instead.
+# Usage: scripts/test.sh [--ui] [device name] [iOS version]
 set -u
 
+scheme=FocusTimer
+kind=Tests
+if [ "${1:-}" = --ui ]; then
+    scheme="FocusTimer UI Tests"
+    kind=UITests
+    shift
+fi
 device=${1:-iPhone 17 Pro}
 os=${2:-26.5}
 cd "$(dirname "$0")/.." || exit 1
 
 stamp=$(date +%Y%m%d-%H%M%S)
-bundle=/tmp/FocusTimerTests-$stamp.xcresult
-log=/tmp/FocusTimerTests-$stamp.log
-summary=/tmp/FocusTimerTests-$stamp.json
+bundle=/tmp/FocusTimer$kind-$stamp.xcresult
+log=/tmp/FocusTimer$kind-$stamp.log
+summary=/tmp/FocusTimer$kind-$stamp.json
 
-xcodebuild -project ios/FocusTimer/FocusTimer.xcodeproj -scheme FocusTimer \
+xcodebuild -project ios/FocusTimer/FocusTimer.xcodeproj -scheme "$scheme" \
     -destination "platform=iOS Simulator,name=$device,OS=$os" \
     -derivedDataPath /tmp/FocusTimerDerivedData -resultBundlePath "$bundle" \
     CODE_SIGNING_ALLOWED=NO test >"$log" 2>&1
@@ -43,7 +51,7 @@ for value in "$total" "$passed" "$failed" "$skipped" "$expected"; do
     esac
 done
 
-echo "$device, iOS $os: total $total, passed $passed, failed $failed, skipped $skipped, expected failures $expected"
+echo "$scheme on $device, iOS $os: total $total, passed $passed, failed $failed, skipped $skipped, expected failures $expected"
 echo "Result bundle: $bundle"
 
 if [ "$status" -ne 0 ] || [ "$failed" -ne 0 ]; then

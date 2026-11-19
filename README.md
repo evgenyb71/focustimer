@@ -7,7 +7,7 @@ Offline Focus → confirmation → Break timers for Chrome and iPhone. This repo
 | Chrome | [Mission](specs/chrome/mission.md) | [Stack](specs/chrome/tech-stack.md) | [Retrospective](specs/chrome/roadmap.md) |
 | iOS | [Mission](specs/ios/mission.md) | [Stack](specs/ios/tech-stack.md) | [Small implementation phases](specs/ios/roadmap.md) |
 
-Start with the relevant constitution, then specify one small phase with acceptance checks before implementation. Follow [AGENTS.md](AGENTS.md) for the working agreement. Other roadmap capabilities, such as accessibility checks and release notes, are planned, not currently implemented.
+Start with the relevant constitution, then specify one small phase with acceptance checks before implementation. Follow [AGENTS.md](AGENTS.md) for the working agreement. An automated accessibility audit runs as UI tests (`scripts/test.sh --ui`), with one open contrast exception recorded in [I28](specs/ios/phases/I28-accessibility-audit.md). Release notes are planned, not yet written.
 
 ## Source and local use
 
