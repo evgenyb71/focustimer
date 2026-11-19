@@ -54,7 +54,7 @@ In order, so a reviewer can follow how the phase reached its current shape. All 
 10. **User checks.** Cmd+U passed on both schemes on iOS 27.0. The VoiceOver walk was done as a best effort and found nothing; the user asked to mark it tested.
 11. **Codex review: scrolling.** The audit had never scrolled, so at the largest size the lower content was not covered. Adding scrolling showed that XCUITest reports stale frames for these SwiftUI elements after a scroll: end-of-scroll detection never fired, and contrast issues were pinned on off-screen elements (the black title "Focus / Break Timer") or sampled wrong pixels (an all-black picture of the Done button, which a real screenshot shows as a white label on the dark fill). Two experiments were tried and reverted: a near-black Done fill, and a solid top scroll edge, which removed the title artefact once but not reliably. The final shape: a fixed four screenfuls at the largest size, a check that each key element came into view, and no contrast category on scrolled screenfuls, whose contrast `PaletteContrastTests` already covers.
 
-Separately, the user asked that the agent never run `rm` in any form, and always ask them to run deletions. This followed a blocked `rm -rf` on a scratch folder during step 4; nothing was deleted. It is recorded in the agent's memory, not in the repository.
+Separately, the user asked that the agent never run `rm` in any form, and always ask them to run deletions. This followed a blocked `rm -rf` on a scratch folder during step 4; nothing was deleted. It was first recorded in the agent's memory and, after the Codex review, added to `AGENTS.md` so both agents follow it.
 
 ## Non-goals
 
@@ -126,3 +126,5 @@ PASSED
 FocusTimer UI Tests on iPhone 17 Pro, iOS 26.5: total 2, passed 2, failed 0, skipped 0, expected failures 0
 PASSED
 ```
+
+Codex re-review: recommended merging with the recorded limitations. Two nonblocking notes, both done: `filledButtonsKeepWhiteLabelsReadable` now also checks white on the Done button's neutral fill, and the decision log no longer says the no-`rm` rule lives only in agent memory. Codex also noted that the palette tests are numerical evidence, not a complete rendered contrast audit below the fold; that limitation stands as recorded.
