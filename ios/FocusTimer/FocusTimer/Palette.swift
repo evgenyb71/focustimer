@@ -59,7 +59,7 @@ enum Palette {
     // Text. Primary text uses the system `.primary` style, so buttons keep their own label colours; this pair
     // mirrors it (black in light, white in dark) for the contrast tests.
     static let primaryText = Pair(light: RGB(red: 0, green: 0, blue: 0), dark: RGB(red: 1, green: 1, blue: 1))
-    static let secondaryText = Pair(light: RGB(red: 0.38, green: 0.35, blue: 0.32), dark: RGB(red: 0.72, green: 0.69, blue: 0.65))
+    static let secondaryText = Pair(light: RGB(red: 0.30, green: 0.28, blue: 0.26), dark: RGB(red: 0.80, green: 0.77, blue: 0.73))
     /// The status line under the time.
     static let message = Pair(light: RGB(red: 0.12, green: 0.33, blue: 0.31), dark: RGB(red: 0.62, green: 0.84, blue: 0.80))
 

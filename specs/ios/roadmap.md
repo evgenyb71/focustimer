@@ -6,7 +6,6 @@ Work from the top. The user can reorder or split phases; note why in the phase s
 
 | Phase | Deliverable | Exit check |
 | --- | --- | --- |
-| I28 | Verify with Accessibility Inspector and VoiceOver (deferred from I19) | Inspector audit of idle, Focus running, paused, waiting for Break, and Cycle complete with no unexplained issues; a VoiceOver walk through one full cycle with every control labelled and the order following the screen. User-reported |
 | I21 | Prepare local release notes and verification checklist (last) | Record version/build, privacy behavior, known limits, device checks, and reproducible build steps; write the changelog from Git history since 2026-11-02 |
 
 Later decisions, not scheduled: App Store submission, store screenshots and privacy forms, signing and distribution automation, and release policy. Not part of this roadmap: custom sound, alternative defaults, fractional-minute input, broader device or OS support, sync, and analytics.
@@ -41,3 +40,4 @@ Each spec holds the evidence and limitations. The app before I01 is in Git histo
 | I20 | App icon of two timer rings, teal Focus behind sage Break, in light, dark, and tinted versions, drawn by `scripts/make-app-icon.swift` | [I20](phases/I20-app-icon.md) |
 | I19 | Light and dark themes from one contrast-tested palette; layout adapts to the largest text sizes; clearer VoiceOver labels; Inspector and VoiceOver check deferred to I28 | [I19](phases/I19-accessibility.md) |
 | I27 | Alerts that arrive while the app is open play only the sound, with no banner or Notification Center entry; background alerts unchanged | [I27](phases/I27-quiet-foreground-alerts.md) |
+| I28 | Accessibility audit as UI tests in their own scheme, with four contrast fixes; one subtitle allowance left as a TODO; VoiceOver walk user-reported | [I28](phases/I28-accessibility-audit.md) |

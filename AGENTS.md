@@ -40,6 +40,7 @@ Run the unit tests from the repository root, on a simulator the user is not usin
 ```sh
 scripts/test.sh                      # iPhone 17 Pro, iOS 26.5
 scripts/test.sh "iPhone 17" 26.5     # another installed simulator
+scripts/test.sh --ui                 # the UI tests (accessibility audit), about a minute
 ```
 
 It prints the executed counts and exits non-zero if the build or a test fails, or if no tests ran. Record its output in the spec.
@@ -65,7 +66,8 @@ If `xcode-select -p` points at Command Line Tools, set `DEVELOPER_DIR` for the i
 ## Code
 
 - `ios/FocusTimer/FocusTimer/`: Swift 6, SwiftUI, Foundation, UIKit lifecycle bridge, UserDefaults, UserNotifications. iPhone only, portrait, iOS 26.0+; Apple frameworks only.
-- `ios/FocusTimer/FocusTimerTests/`: Swift Testing (`import Testing`), hosted by the app, one `*Tests.swift` file per suite. Put tests in the suite they belong to, or a new suite for a new area; helpers shared across suites go in `TestDoubles.swift`. The target uses a synchronized folder, so new files need no project edit. XCTest is reserved for a future UI-test target.
+- `ios/FocusTimer/FocusTimerTests/`: Swift Testing (`import Testing`), hosted by the app, one `*Tests.swift` file per suite. Put tests in the suite they belong to, or a new suite for a new area; helpers shared across suites go in `TestDoubles.swift`. The target uses a synchronized folder, so new files need no project edit.
+- `ios/FocusTimer/FocusTimerUITests/`: XCTest UI tests, in their own scheme, FocusTimer UI Tests, so Cmd+U on FocusTimer stays fast. Reach a screen by seeding saved data through launch arguments, not by adding test code to the app. Synchronized folder, like the unit tests.
 - 4-space Swift indentation, camelCase values and functions, PascalCase types. No formatter, linter, or npm commands. Do not move existing code into a new generic structure.
 - `CHANGELOG.md` holds history through 2026-11-02. It is not updated per phase; it is written from Git history at release (I21).
 

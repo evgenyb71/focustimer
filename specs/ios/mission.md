@@ -20,7 +20,7 @@ Not yet verified: behavior on a physical device, and the deferred suspension che
 
 ## Still to build
 
-An Accessibility Inspector and VoiceOver check; local release documentation. See the [roadmap](roadmap.md).
+Local release documentation; a TODO to clear the subtitle contrast allowance in the accessibility audit ([I28](phases/I28-accessibility-audit.md)). See the [roadmap](roadmap.md).
 
 ## Invariants
 
