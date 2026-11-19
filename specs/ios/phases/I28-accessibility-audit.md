@@ -8,7 +8,7 @@ The app passes Apple's accessibility audit on each main screen, and VoiceOver us
 
 Roadmap exit check: an audit of idle, Focus running, paused, waiting for Break, and Cycle complete with no unexplained issues; a VoiceOver walk through one full cycle with every control labelled and the order following the screen. User-reported.
 
-Exit check status: **partly met.** All five screens are audited at both text sizes and four findings are fixed, but one issue stays unexplained: the audit flags the header subtitle for contrast although it measures well above the target. It is allowed in the test with a TODO, at the user's request. The VoiceOver walk is user-reported as a best-effort pass, not step by step.
+Exit check status: **partly met.** All five screens are audited at both text sizes, including the parts below the fold at the largest size, and four findings are fixed. One issue stays unexplained: the audit flags the header subtitle for contrast although it measures well above the target. It is allowed in the test with a TODO, at the user's request. That allowance also passes any contrast issue reported without an element, so a passing audit does not prove the subtitle is the only one affected. Contrast is audited on the first screenful only; below the fold it rests on `PaletteContrastTests` (see the review section). The VoiceOver walk is user-reported as a best-effort pass, not step by step.
 
 ## Decisions
 
@@ -23,7 +23,7 @@ User, 2026-11-19:
 Agent decisions, open to revision:
 
 - **Reaching each screen:** revised during the build: instead of tapping through with short minutes, each launch seeds the saved configuration and timer through launch arguments (`-config`, `-state`, `-schemaVersion` as property-list data), which override the stored values for that launch only. A phase that ended before launch shows its end screen once, which reaches waiting and Cycle complete. No test-only code goes into the app, and each screen is exact and immediate.
-- **Audit scope:** all audit categories, at the default and the largest accessibility text size. An issue that cannot be fixed is allowed in the test by its type and element only, with the reason recorded here. Two allowances exist: contrast on a disabled button (WCAG exempts inactive controls), and the subtitle contrast TODO. The second also lets through contrast issues with no element attached, because the audit sometimes reports the subtitle without naming it; this is broader than planned and is the first thing to remove when the TODO is resolved.
+- **Audit scope:** all audit categories, at the default and the largest accessibility text size. At the largest size the test audits four screenfuls, swiping between them, and fails unless each element the screen is about (the status card, Start, Start Break, Restart, Done) came into view during one of them. Scrolled screenfuls skip the contrast category; see the review section. An issue that cannot be fixed is allowed in the test by its type and element only, with the reason recorded here. Two allowances exist: contrast on a disabled button (WCAG exempts inactive controls), and the subtitle contrast TODO. The second also lets through contrast issues with no element attached, because the audit sometimes reports the subtitle without naming it; this is broader than planned and is the first thing to remove when the TODO is resolved.
 - **Visible design changes from the audit:** the pause, cancel, and Done buttons changed from bordered glass to solid fills (teal with white icons; dark grey with a white label), and secondary text is darker in both themes. Reviewers should expect these in screenshots.
 - **Test target:** a new `FocusTimerUITests` target with a synchronized folder like the unit tests, in its own scheme (above).
 - **Saved data:** no change, and no new `schemaVersion`.
@@ -52,6 +52,7 @@ In order, so a reviewer can follow how the phase reached its current shape. All 
 8. **Reversal.** The user noticed that no UI tests ran and asked to disable only the failing part, and to give UI tests their own scheme so they can be run separately. The skips were removed, the UI target moved to the new "FocusTimer UI Tests" scheme, and `scripts/test.sh --ui` was added.
 9. **Subtitle identified.** The next run attached the element to the issues: the subtitle, not the steppers. The allowance was narrowed to contrast on that label, or with no element, under a TODO. Both UI tests then passed.
 10. **User checks.** Cmd+U passed on both schemes on iOS 27.0. The VoiceOver walk was done as a best effort and found nothing; the user asked to mark it tested.
+11. **Codex review: scrolling.** The audit had never scrolled, so at the largest size the lower content was not covered. Adding scrolling showed that XCUITest reports stale frames for these SwiftUI elements after a scroll: end-of-scroll detection never fired, and contrast issues were pinned on off-screen elements (the black title "Focus / Break Timer") or sampled wrong pixels (an all-black picture of the Done button, which a real screenshot shows as a white label on the dark fill). Two experiments were tried and reverted: a near-black Done fill, and a solid top scroll edge, which removed the title artefact once but not reliably. The final shape: a fixed four screenfuls at the largest size, a check that each key element came into view, and no contrast category on scrolled screenfuls, whose contrast `PaletteContrastTests` already covers.
 
 Separately, the user asked that the agent never run `rm` in any form, and always ask them to run deletions. This followed a blocked `rm -rf` on a scratch folder during step 4; nothing was deleted. It is recorded in the agent's memory, not in the repository.
 
@@ -106,3 +107,22 @@ The UI tests audit all five screens at both text sizes, with the subtitle allowa
 User-reported, 2026-11-19, on the user's simulator (iPhone 18 Pro Max, iOS 27.0): Cmd+U passed on both the FocusTimer and the FocusTimer UI Tests schemes. The user walked through the VoiceOver steps with `scripts/debug-minute.sh 10` as far as they could and found everything working, with no findings; the user asked for it to be marked as tested. Step-by-step results were not recorded.
 
 Remaining limitations: the subtitle contrast allowance (TODO above); VoiceOver checked as a best-effort walk on the simulator, not step by step and not on a physical device; Switch Control and Voice Control.
+
+### Review
+
+Codex review of the first PR revision: one P2 finding, fixed, and documentation notes, addressed.
+
+- **[P2] The audit did not cover content below the fold at the largest size.** Fixed: the test now scrolls through four screenfuls and fails unless each key element came into view (decision log, step 11). The first scrolled run confirmed the gap: Restart, Done, and Start Break had never been audited. Scrolled screenfuls skip the contrast category because of XCUITest's stale frames there; their contrast is covered by the palette unit tests.
+- **The no-element allowance is broad.** Agreed and now stated wherever the audit is summarised: here, the mission, the README, the test comment, and the PR.
+- **README** now describes the audit and its open exception.
+- **The no-`rm` rule** is now in `AGENTS.md`, so both agents follow it.
+- **Screenshots** of the solid header and Done buttons are for the user to attach to the PR.
+
+After the fixes, agent-run on iPhone 17 Pro, iOS 26.5:
+
+```text
+FocusTimer on iPhone 17 Pro, iOS 26.5: total 258, passed 258, failed 0, skipped 0, expected failures 0
+PASSED
+FocusTimer UI Tests on iPhone 17 Pro, iOS 26.5: total 2, passed 2, failed 0, skipped 0, expected failures 0
+PASSED
+```

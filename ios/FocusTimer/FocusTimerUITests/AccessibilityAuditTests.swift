@@ -34,6 +34,16 @@ final class AccessibilityAuditTests: XCTestCase {
 
     // MARK: Helpers
 
+    /// Audits the whole screen: the visible part, then each further part as the scroll view moves down. The audit
+    /// checks only what is on screen, and at the largest text size the status card and buttons start below the fold.
+    /// Each element the screen is about must be brought into view during one of the audited parts, which proves the
+    /// parts covered it.
+    ///
+    /// XCUITest reports stale frames for these SwiftUI elements once the view has scrolled. So the number of parts is
+    /// fixed rather than detected (the largest-size content is about twice the screen height), and scrolled parts skip
+    /// the contrast category: there it attributes issues to off-screen elements, such as the black title, and samples
+    /// the wrong pixels (an all-black picture of the Done button). Contrast below the fold is covered by
+    /// `PaletteContrastTests`, which checks every text colour against every background it is drawn on.
     private func audit(_ screen: Screen, textSize: String?) throws {
         let app = XCUIApplication()
         app.launchArguments = Self.seed(screen)
@@ -42,25 +52,52 @@ final class AccessibilityAuditTests: XCTestCase {
         }
         app.launch()
         XCTAssertTrue(app.buttons["primaryTimerButton"].waitForExistence(timeout: 5), "\(screen) did not load")
-        XCTAssertTrue(Self.isShowing(screen, in: app), "\(screen) is not on screen")
 
-        try app.performAccessibilityAudit { issue in
-            let element = issue.element.map { "\($0.elementType.rawValue) label=\"\($0.label)\" id=\"\($0.identifier)\" frame=\($0.frame)" } ?? "none"
-            print("AUDIT \(screen) size=\(textSize ?? "default") type=\(issue.auditType.rawValue) \(issue.compactDescription) | \(issue.detailedDescription) | element: \(element)")
-            return Self.isAllowed(issue)
+        let size = textSize ?? "default"
+        let required = Self.requiredElements(screen, in: app)
+        var seen = Set<String>()
+        let scrollView = app.scrollViews.firstMatch
+        let parts = textSize == nil ? 1 : Self.largestTextParts
+
+        for part in 1...parts {
+            for (name, element) in required where element.exists && element.isHittable {
+                seen.insert(name)
+            }
+            let categories: XCUIAccessibilityAuditType = part == 1 ? .all : .all.subtracting(.contrast)
+            try app.performAccessibilityAudit(for: categories) { issue in
+                let element = issue.element.map { "\($0.elementType.rawValue) label=\"\($0.label)\" id=\"\($0.identifier)\"" } ?? "none"
+                print("AUDIT \(screen) size=\(size) part=\(part) type=\(issue.auditType.rawValue) \(issue.compactDescription) | element: \(element)")
+                return Self.isAllowed(issue)
+            }
+            if part < parts {
+                scrollView.swipeUp()
+            }
+        }
+
+        for name in required.keys where !seen.contains(name) {
+            XCTFail("\(screen) at \(size): \(name) was never brought into view, so the audit did not cover it")
         }
         app.terminate()
     }
 
-    /// Whether the expected screen is showing, so each audit covers the state it names.
-    private static func isShowing(_ screen: Screen, in app: XCUIApplication) -> Bool {
-        switch screen {
-        case .idle: app.staticTexts["READY"].exists
-        case .focusRunning, .focusPaused: app.otherElements["activeTimerStatus"].exists
-            || app.staticTexts.matching(identifier: "activeTimerStatus").count > 0
-            || app.descendants(matching: .any)["activeTimerStatus"].exists
-        case .waitingForBreak: app.buttons["Start Break"].exists
-        case .cycleComplete: app.buttons["Restart"].exists
+    /// Screenfuls audited at the largest text size.
+    static let largestTextParts = 4
+
+    /// The elements each screen is about; each must be on screen during one of the audited parts.
+    private static func requiredElements(_ screen: Screen, in app: XCUIApplication) -> [String: XCUIElement] {
+        let primary = app.buttons["primaryTimerButton"]
+        return switch screen {
+        case .idle:
+            ["Ready card": app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH[c] 'ready'")).firstMatch, "Start": primary]
+        case .focusRunning, .focusPaused:
+            [
+                "status card": app.descendants(matching: .any)["activeTimerStatus"],
+                "pause or resume": app.buttons.matching(NSPredicate(format: "label IN {'Pause timer', 'Resume timer'}")).firstMatch,
+            ]
+        case .waitingForBreak:
+            ["Start Break": app.buttons["Start Break"]]
+        case .cycleComplete:
+            ["Restart": app.buttons["Restart"], "Done": app.buttons["doneButton"]]
         }
     }
 
@@ -69,7 +106,9 @@ final class AccessibilityAuditTests: XCTestCase {
         // TODO(I28): stop allowing these. The audit flags the header subtitle for contrast on most screens, sometimes
         // without naming the element. The subtitle is dark grey on cream, well above 4.5:1 by the palette's own
         // measurement, so the audit's reading looks wrong; find out why (font weight, the gradient behind it), fix
-        // it, and remove this. Every other contrast issue still fails. See specs/ios/phases/I28-accessibility-audit.md.
+        // it, and remove this. Caution: the no-element branch lets through ANY unidentified contrast issue, not only
+        // the subtitle, so a pass does not prove only the subtitle is affected. Contrast issues that name another
+        // element still fail. See specs/ios/phases/I28-accessibility-audit.md.
         if issue.auditType == .contrast, issue.element == nil || issue.element?.label == "Run Focus, confirm, then run Break." {
             return true
         }

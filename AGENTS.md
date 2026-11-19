@@ -74,6 +74,7 @@ If `xcode-select -p` points at Command Line Tools, set `DEVELOPER_DIR` for the i
 ## Git and security
 
 - Never commit to `main` directly. Commit, push, open a PR, or merge only when the user asks.
+- Never run `rm` yourself, in any form or folder, including scratch and `/tmp`. If something must be deleted, stop and give the user the exact command to run. Write to a new folder instead of clearing an old one.
 - Always ask before any delete (`rm`, `git branch -d/-D`, `git push --delete`, `git clean`, `git reset --hard`). Show the exact command and what it affects, and wait for an explicit yes, even if the request already mentioned deleting. This includes the branch of a merged PR; a squash-merged branch needs `-D`, because Git does not see it as merged, so confirm the PR merged first.
 - Use clear imperative commit messages and PR titles. PR descriptions state the resulting behavior and validation, link the phase spec, and include screenshots for UI changes.
 - Keep Markdown clear, with relative links between repository documents.

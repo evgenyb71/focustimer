@@ -20,7 +20,7 @@ Not yet verified: behavior on a physical device, and the deferred suspension che
 
 ## Still to build
 
-Local release documentation; a TODO to clear the subtitle contrast allowance in the accessibility audit ([I28](phases/I28-accessibility-audit.md)). See the [roadmap](roadmap.md).
+Local release documentation; a TODO to clear the contrast allowance in the accessibility audit ([I28](phases/I28-accessibility-audit.md)). The allowance covers the header subtitle and also any contrast issue the audit reports without naming an element, so a passing audit does not prove the subtitle is the only one. See the [roadmap](roadmap.md).
 
 ## Invariants
 
