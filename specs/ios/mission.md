@@ -22,7 +22,7 @@ Not yet verified: behavior on a physical device, and the deferred suspension che
 
 ## Planned: Guided Break (not built)
 
-Stage 2 adds an optional guided routine inside Break. Focus stays a plain timer. This section records the user's intent and decisions of 2026-11-23; it does not describe built behavior. The current behavior and invariants above stay in force until a verified phase changes them.
+Stage 2 adds an optional guided routine inside Break. Focus stays a plain timer. This section records the user's intent and decisions of 2026-11-23; it does not describe built behavior. The current behavior and invariants in this document stay in force until a verified phase changes them.
 
 The [Stage 2 roadmap](roadmap.md#stage-2-guided-break) starts with product design in I36. Detailed decisions belong to the phase that needs them; preparing this roadmap does not settle them.
 
