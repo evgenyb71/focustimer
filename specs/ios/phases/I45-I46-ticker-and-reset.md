@@ -43,7 +43,7 @@ Tick an item only when it is done.
 - [x] User: run Cmd+U and the short flow; record in Results as user-reported.
 - [x] Update the [tech stack](../tech-stack.md) on the ticker and its option, and the README's next planned work. The [mission](../mission.md) changes only if behavior does.
 - [x] Set `Status: verified` and move the roadmap row to Completed.
-- [ ] Open the PR; fix correctness findings from the Codex review and rerun the affected checks.
+- [x] Open the PR; fix correctness findings from the Codex review and rerun the affected checks.
 
 ## Checks
 
@@ -80,3 +80,7 @@ User-reported, 2026-11-25, on the user's simulator with `scripts/debug-minute.sh
 The mission is unchanged, because behavior is.
 
 Remaining limitations: a physical device; long suspension by iOS.
+
+### Review
+
+Codex review of the PR, as reported by the user on 2026-11-25: no correctness findings; recommended approving. Codex ran the unit tests itself: 265 passed, no failures or skips. No code changed, so no checks were rerun.
