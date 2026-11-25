@@ -10,7 +10,7 @@ struct TimerStoreNotificationRestartTests {
     let notifications = RecordingNotificationScheduler()
 
     func makeTimer(secondsPerMinute: Int = 60) -> TimerStore {
-        TimerStore(clock: clock, store: store, notifications: notifications, secondsPerMinute: secondsPerMinute)
+        TimerStore(clock: clock, store: store, notifications: notifications, secondsPerMinute: secondsPerMinute, ticksAutomatically: false)
     }
 
     func makeBreakRunning(on timer: TimerStore? = nil) -> TimerStore {

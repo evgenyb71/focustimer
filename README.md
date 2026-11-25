@@ -7,7 +7,7 @@ FocusTimer is an offline Focus → confirmation → Break timer. The native iPho
 | Chrome | [Mission](specs/chrome/mission.md) | [Stack](specs/chrome/tech-stack.md) | [Retrospective](specs/chrome/roadmap.md) |
 | iOS | [Mission](specs/ios/mission.md) | [Stack](specs/ios/tech-stack.md) | [Phases](specs/ios/roadmap.md) |
 
-Start with the relevant mission and follow [AGENTS.md](AGENTS.md) for the working agreement. The next planned work is [cleanup before Guided Break](specs/ios/roadmap.md#cleanup-before-guided-break), with I45 and I46 as one phase. [Stage 2: Guided Break](specs/ios/roadmap.md#stage-2-guided-break) follows, starting with I36 product and interaction design. Guided Break is not built yet. Detailed choices are agreed in the phase that needs them, before implementation.
+Start with the relevant mission and follow [AGENTS.md](AGENTS.md) for the working agreement. The next planned work is [Stage 2: Guided Break](specs/ios/roadmap.md#stage-2-guided-break), beginning with I36 product and interaction design. Guided Break is not built yet. Detailed choices are agreed in the phase that needs them, before implementation.
 
 An automated accessibility audit runs as UI tests (`scripts/test.sh --ui`), with one open contrast exception recorded in [I28](specs/ios/phases/I28-accessibility-audit.md). Release notes are planned, not yet written.
 

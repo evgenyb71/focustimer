@@ -26,7 +26,7 @@ struct TimerStoreInvariantTests {
     }
 
     func load() -> TimerStore {
-        TimerStore(clock: clock, store: store, notifications: notifications)
+        TimerStore(clock: clock, store: store, notifications: notifications, ticksAutomatically: false)
     }
 
     func savedState() -> TimerStore.TimerState? {

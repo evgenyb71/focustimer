@@ -11,7 +11,7 @@ struct TimerStoreShortMinuteTests {
     let notifications = RecordingNotificationScheduler()
 
     func makeTimer(secondsPerMinute: Int = 10) -> TimerStore {
-        TimerStore(clock: clock, store: store, notifications: notifications, secondsPerMinute: secondsPerMinute)
+        TimerStore(clock: clock, store: store, notifications: notifications, secondsPerMinute: secondsPerMinute, ticksAutomatically: false)
     }
 
     func savedConfiguration() -> TimerStore.Configuration? {
@@ -29,7 +29,7 @@ struct TimerStoreShortMinuteTests {
     // MARK: Real minutes by default
 
     @Test func theDefaultRunsRealMinutes() {
-        let timer = TimerStore(clock: clock, store: store, notifications: notifications)
+        let timer = TimerStore(clock: clock, store: store, notifications: notifications, ticksAutomatically: false)
         timer.configuration.durationASeconds = 120
 
         timer.startFocus()

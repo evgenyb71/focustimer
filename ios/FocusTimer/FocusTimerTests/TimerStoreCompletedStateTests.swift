@@ -9,7 +9,7 @@ struct TimerStoreCompletedStateTests {
     let notifications = RecordingNotificationScheduler()
 
     func makeTimer() -> TimerStore {
-        TimerStore(clock: clock, store: store, notifications: notifications)
+        TimerStore(clock: clock, store: store, notifications: notifications, ticksAutomatically: false)
     }
 
     func makeBreakRunning() -> TimerStore {

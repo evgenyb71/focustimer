@@ -172,7 +172,8 @@ final class TimerStore: ObservableObject {
     private let clock: any Clock
     private let store: any KeyValueStore
     private let notifications: any NotificationScheduling
-    private var ticker: Timer?
+    /// The scheduled one-second timer; nil when the store does not tick by itself. Readable so tests can check it.
+    private(set) var ticker: Timer?
     /// True when launch ignored records of a newer or unreadable schema version.
     private var versionNeedsWrite = false
     /// How many seconds each configured minute runs for: 60, or 1–59 in a Debug build set up for quick checks.
@@ -182,7 +183,8 @@ final class TimerStore: ObservableObject {
         clock: any Clock = SystemClock(),
         store: any KeyValueStore = UserDefaults.standard,
         notifications: any NotificationScheduling = SystemNotificationScheduler(),
-        secondsPerMinute: Int = 60
+        secondsPerMinute: Int = 60,
+        ticksAutomatically: Bool = true
     ) {
         self.clock = clock
         self.store = store
@@ -229,8 +231,16 @@ final class TimerStore: ObservableObject {
         // of range, and it updates the display itself.
         reconcileWithCurrentTime()
         removeObsoleteDeliveredCompletions()
-        startTicker()
+        if ticksAutomatically {
+            startTicker()
+        }
         checkAlertPermission()
+    }
+
+    /// The run loop keeps a scheduled timer, so releasing the store must stop it. Isolated, because the timer
+    /// belongs to the main actor.
+    isolated deinit {
+        ticker?.invalidate()
     }
 
     var canEditDurations: Bool { state.phase == .idle || state.phase == .completed }
@@ -413,13 +423,9 @@ final class TimerStore: ObservableObject {
         updateDisplayedTime()
     }
 
+    /// Returns to idle from any phase and keeps the configuration.
     func cancel() {
-        state = TimerState()
-        noticeMessage = nil
-        notifications.cancelAllPendingCompletions()
-        notifications.removeAllDeliveredCompletions()
-        persistState()
-        updateDisplayedTime()
+        resetToIdle()
     }
 
     /// Ends a finished cycle: saves the durations and returns to idle. In any other phase, including
@@ -429,9 +435,14 @@ final class TimerStore: ObservableObject {
 
         configuration = configuration.normalized
         persistConfiguration()
+        resetToIdle()
+    }
+
+    /// The reset shared by Cancel and Done. Alerts are removed from every phase, because a request can outlive
+    /// the state (see `startFocus()`).
+    private func resetToIdle() {
         state = TimerState()
         noticeMessage = nil
-        // Like Cancel: a request can outlive the state (see `startFocus()`).
         notifications.cancelAllPendingCompletions()
         notifications.removeAllDeliveredCompletions()
         persistState()
@@ -551,14 +562,9 @@ final class TimerStore: ObservableObject {
         ticker?.invalidate()
         ticker = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
-                self?.tick()
+                self?.reconcileWithCurrentTime()
             }
         }
-    }
-
-    private func tick() {
-        reconcileWithCurrentTime()
-        updateDisplayedTime()
     }
 
     /// Whole seconds until the deadline, rounded up. Bounded before the `Int` conversion, which would trap

@@ -28,7 +28,7 @@ struct TimerStoreRecoveryTests {
 
     func load() -> (TimerStore, [String]) {
         let seededWrites = store.writtenKeys.count
-        let timer = TimerStore(clock: clock, store: store, notifications: notifications)
+        let timer = TimerStore(clock: clock, store: store, notifications: notifications, ticksAutomatically: false)
         return (timer, Array(store.writtenKeys.dropFirst(seededWrites)))
     }
 
