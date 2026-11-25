@@ -20,7 +20,7 @@ struct TimerStoreTransitionTests {
     let breakSeconds = 60
 
     func makeTimer() -> TimerStore {
-        let timer = TimerStore(clock: clock, store: store, notifications: notifications)
+        let timer = TimerStore(clock: clock, store: store, notifications: notifications, ticksAutomatically: false)
         timer.configuration = TimerStore.Configuration(
             durationASeconds: focusSeconds,
             durationBSeconds: breakSeconds
@@ -312,7 +312,7 @@ struct TimerStoreTransitionTests {
 
 extension TimerStoreTransitionTests {
     func relaunch() -> TimerStore {
-        TimerStore(clock: clock, store: store, notifications: notifications)
+        TimerStore(clock: clock, store: store, notifications: notifications, ticksAutomatically: false)
     }
 
     var savedDurations: TimerStore.Configuration {

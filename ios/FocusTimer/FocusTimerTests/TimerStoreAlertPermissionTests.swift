@@ -12,7 +12,7 @@ struct TimerStoreAlertPermissionTests {
 
     func makeTimer(status: UNAuthorizationStatus = .authorized) async -> TimerStore {
         notifications.status = status
-        let timer = TimerStore(clock: clock, store: store, notifications: notifications)
+        let timer = TimerStore(clock: clock, store: store, notifications: notifications, ticksAutomatically: false)
         await timer.alertPermissionCheck?.value
         return timer
     }
@@ -66,7 +66,7 @@ struct TimerStoreAlertPermissionTests {
 
     @Test func anOlderReadFinishingLastDoesNotOverwriteANewerOne() async {
         notifications.holdsStatusReads = true
-        let timer = TimerStore(clock: clock, store: store, notifications: notifications)
+        let timer = TimerStore(clock: clock, store: store, notifications: notifications, ticksAutomatically: false)
         let launchRead = timer.alertPermissionCheck
         timer.checkAlertPermission()
         let newerRead = timer.alertPermissionCheck
